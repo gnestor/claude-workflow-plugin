@@ -1,153 +1,125 @@
-# Agent Workspace
+# Ecommerce Plugin
 
-AI workspace for business operations, powered by Claude Code with agent skills and workflows.
+E-commerce operations assistant for Claude Code. Query data, automate workflows, and manage your business through natural language.
 
-## Overview
+## Installation
 
-This workspace gives an AI agent specialized knowledge and tools through **skills** — directories containing documentation, context, and scripts in `.claude/skills/`. The agent automatically detects when to use each skill based on your requests.
+```bash
+claude plugins add ecommerce
+```
 
-### What This Enables
+Or for local development:
 
-**Natural Language Data Access:**
-- Query Shopify orders, products, customers, and inventory
-- Analyze Google Analytics website traffic and user behavior
-- Query Google Sheets for financial data and metrics
-- Search and query Notion workspace content
-- Query Klaviyo email/SMS marketing data
-- Access QuickBooks accounting and financial reports
-- Manage Instagram, Pinterest, and Meta ads
-- Query PostgreSQL data warehouse with natural language
+```bash
+claude --plugin-dir path/to/ecommerce
+```
 
-**Browser Automation:**
-- Automate Chrome browser via DevTools Protocol
-- Record and replay browser interactions
+## Commands
 
-**Content & Documents:**
-- Generate documents (PDF, DOCX, XLSX, PPTX) via plugins
-- Draft emails, social posts, and ad copy
-- Create web components and interactive dashboards
+| Command | Description |
+|---------|-------------|
+| `/ecommerce:setup` | Personalize the plugin for your business |
+| `/ecommerce:recap` | Document the current session and update knowledge base |
+| `/ecommerce:report` | Generate a structured analysis report |
+| `/ecommerce:seo-audit` | Run SEO analysis for a domain or product catalog |
 
-## Quick Start
+## Skills
 
-See [SETUP.md](SETUP.md) for the full setup guide.
+| Domain | Skill |
+|--------|-------|
+| Shopify orders, products, customers, inventory | shopify |
+| Email/SMS marketing, campaigns, flows | klaviyo |
+| Customer support tickets | gorgias |
+| Accounting, financial reports | quickbooks |
+| Facebook/Instagram ad management | meta-ads |
+| Google ad management | google-ads |
+| Website traffic, sessions, conversions | google-analytics |
+| Search performance, SEO data | google-search-console |
+| Email management | gmail |
+| File storage, documents | google-drive |
+| Spreadsheets, financial metrics | google-sheets |
+| Cloud data warehouse | google-bigquery |
+| AI image/text generation | google-ai-studio |
+| Search keyword trends | google-trends |
+| Calendar, meetings | google-calendar |
+| Instagram organic content, UGC | instagram |
+| Pinterest boards, pins | pinterest |
+| Knowledge base, tasks, notes | notion |
+| Cross-source data joins, historical data | postgresql |
+| Digital assets, media library | air |
+| SEO research, keyword optimization | seo |
+| Browser automation | puppeteer |
+| Your business context | company |
+| Brand voice and style guidelines | brand-voice |
+| Report generation templates | reports |
+| Session documentation | recap |
 
-1. Fork this repo
-2. Open in VS Code with Claude Code extension (or Craft Agents)
-3. Tell the agent: **"Run the setup workflow"**
-4. The agent personalizes the workspace for your business
+## MCP Integrations
+
+This plugin uses MCP servers for API access. See [CONNECTORS.md](CONNECTORS.md) for the full list of integrations and how to configure them.
+
+**Hosted MCP servers** (handle auth automatically):
+- Shopify, Klaviyo, Notion, QuickBooks, Google Analytics, Google Ads
+
+**Local MCP servers** (included in `servers/`):
+- Gorgias, Air.inc, Google Workspace (Gmail, Drive, Sheets, Calendar), Google Search Console, Google BigQuery, Google AI Studio, Google Trends, Instagram, Pinterest, Meta Ads
+
+**Community MCP servers** (via npm):
+- PostgreSQL, Puppeteer
+
+## Agent Identity
+
+You are a business operations assistant. You understand the user's business through connected tools and the **company** skill. You help automate workflows, analyze data, draft communications, and make decisions.
+
+### Tone & Communication Style
+
+Communicate with an intelligent, honest, direct, curious, and truth-seeking approach. Do not pander or provide false reassurance. Challenge assumptions when warranted and ask clarifying questions to understand the root of problems.
+
+### Decision-Making Authority
+
+**Consult before writing to external resources**: Always ask for approval before writing to databases, APIs, email, or any external system. Read-only operations (querying data, fetching information) can be performed autonomously.
+
+**Autonomous decisions**:
+- Data analysis and reporting
+- Drafting communications for review
+- Creating plans and recommendations
+- Researching information
+
+**Requires consultation**:
+- Executing mutations (creating/updating/deleting records)
+- Sending emails or messages
+- Making purchases or financial commitments
+- Changes that affect team workflows
+
+## Contributing
+
+1. Clone this repo locally
+2. Link to your workspace: `claude --plugin-dir path/to/ecommerce`
+3. Make changes to skills, commands, or servers
+4. Test with Claude Code
+5. Submit a pull request
+
+### Creating New Skills
+
+Add a directory to `skills/` with a `SKILL.md` file. Optionally include a `references/` subdirectory for supporting data.
+
+### Adding MCP Servers
+
+1. Add the server entry to `.mcp.json`
+2. If building a custom server, add it to `servers/`
+3. Create a corresponding skill in `skills/`
+4. Update `CONNECTORS.md` with the new category mapping
 
 ## Directory Structure
 
 ```
-agent-workspace/
-├── AGENTS.md                    # Primary agent context (cross-tool standard)
-├── CLAUDE.md                    # Links to AGENTS.md (for Claude Code)
-├── SETUP.md                     # Setup guide for non-coders
-├── .claude/
-│   ├── skills/                  # Agent skills
-│   │   ├── company/             # Your business context (populated during setup)
-│   │   ├── brand-guidelines/            # Your brand guidelines (populated during setup)
-│   │   ├── shopify/             # Shopify GraphQL API
-│   │   ├── google/              # Gmail, Analytics, Sheets, Drive, BigQuery, Ads
-│   │   ├── klaviyo/             # Email/SMS marketing
-│   │   ├── notion/              # Notion workspace
-│   │   ├── postgresql/          # PostgreSQL data warehouse
-│   │   ├── quickbooks/          # Accounting and financial reports
-│   │   ├── instagram/           # Instagram content and analytics
-│   │   ├── meta-ads/            # Meta/Facebook/Instagram ads
-│   │   ├── pinterest/           # Pinterest boards and analytics
-│   │   ├── gorgias/             # Customer support tickets
-│   │   ├── air/                 # Digital asset management
-│   │   ├── puppeteer/           # Chrome browser automation
-│   │   ├── higgsfield/          # AI image generation
-│   │   ├── recap/               # Session documentation
-│   │   ├── reports/             # Report generation
-│   │   └── seo/                 # SEO optimization
-│   └── settings.json            # Claude Code hooks (Entire CLI)
-├── lib/
-│   └── oauth.ts                 # Unified OAuth client (loopback flow)
-├── workflows/                   # Workflow outputs and plans
-├── downloads/                   # Working files (gitignored)
-├── scripts/
-│   └── setup.sh                 # Prerequisites installer
-├── .env                         # Credentials (gitignored)
-├── .env.example                 # Credential template
-└── deno.json                    # Deno configuration
+ecommerce/
+├── .claude-plugin/plugin.json    # Plugin manifest
+├── .mcp.json                     # MCP server declarations
+├── servers/                      # Custom local MCP servers
+├── commands/                     # Slash command definitions
+├── skills/                       # Domain expertise (context only)
+├── CONNECTORS.md                 # Tool integration documentation
+├── README.md                     # This file
+└── LICENSE
 ```
-
-## Architecture
-
-### Skills-Based Approach
-
-This workspace uses **Agentic Skills** rather than MCP servers. Skills are:
-
-- **Simple**: Markdown documentation + TypeScript scripts
-- **Secure**: Explicit control over what tools and data each skill can access
-- **Auto-invoked**: The agent detects when to use each skill
-- **Git-friendly**: Easy to version, share, and collaborate on
-- **Self-improving**: Skills evolve as they're used
-
-### How Skills Work
-
-1. **Detection**: The agent reads skill documentation and decides when to invoke them
-2. **Execution**: Skills run Deno TypeScript scripts that interact with APIs and databases
-3. **Context**: Skills have access to reference data stored alongside them
-
-### Plugins
-
-Document generation and skill creation come from the Anthropic plugin marketplace:
-
-```
-/plugin install document-skills@anthropic-agent-skills
-/plugin install skill-creator@anthropic-agent-skills
-```
-
-## Technology Stack
-
-- **Runtime**: Deno (not Node.js)
-- **Language**: TypeScript
-- **Data**: CSV for tables, JSON for nested data
-- **Frontend**: React, Observable Framework
-
-## Frontend Options
-
-| Frontend | Best For | Setup |
-|----------|----------|-------|
-| **VS Code + Claude Code** | Full IDE experience with file browser | Install extension, open folder |
-| **Craft Agents** | Desktop GUI with multi-session inbox | Set working directory, symlink skills |
-| **Claude Desktop** | Quick questions, simple tasks | Enable Claude Code, open folder |
-
-## Contributing
-
-As you use the workspace, the agent improves skills and context files. To contribute improvements back:
-
-1. Tell the agent: **"Submit my improvements"**
-2. The agent creates a branch and pull request
-3. Approve it in the GitHub web UI
-
-Entire CLI auto-commits after each agent response, so you never need to use git manually.
-
-### Creating New Skills
-
-Ask the agent: **"Create a new skill for [topic]"** (requires skill-creator plugin).
-
-Skill structure:
-```
-.claude/skills/my-skill/
-├── SKILL.md              # Documentation (required)
-├── scripts/              # TypeScript scripts
-│   └── main.ts
-└── references/           # Supporting data
-    └── examples.md
-```
-
-## Environment Variables
-
-Copy `.env.example` to `.env` and configure the services you use. See the setup workflow for guided configuration.
-
-## Security
-
-- Never commit `.env` (already in .gitignore)
-- Review skill scripts before running
-- API keys are stored locally in `.env`
-- OAuth uses loopback redirect (no cloud middleman)

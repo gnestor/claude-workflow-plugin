@@ -1,18 +1,35 @@
-.DS_Store
+# Credentials
 .env
-.claude/settings.local.json
 
-# Intermediate files
-assets/
+# User-specific content (populated during setup)
+# Uncomment these if contributing upstream:
+# skills/company/references/*.md
+# skills/brand-voice/SKILL.md
 
-# Skill-generated schemas (can be regenerated)
-.claude/skills/google/bigquery/references/schemas/*.json
-.claude/skills/notion/references/schemas/*.json
-.claude/skills/postgresql/references/schemas/*.json
+# Cached schemas (user-populated)
+skills/notion/references/schemas/*.json
+skills/postgresql/references/schemas/*.json
+skills/google-bigquery/references/schemas/*.json
 
-# Deno
+# Node modules (for local MCP servers)
 node_modules/
-deno.lock
+servers/*/node_modules/
 
-# Downloads and working files
+# OS files
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# Workflow outputs (user workspace, not plugin)
+workflows/
+assets/
 downloads/
+
+# Entire CLI
+.entire/
+
+# Old structure artifacts
+deno.lock
+.claude/settings.local.json

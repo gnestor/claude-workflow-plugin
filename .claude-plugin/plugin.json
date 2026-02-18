@@ -1,0 +1,8 @@
+{
+  "name": "ecommerce",
+  "version": "1.0.0",
+  "description": "E-commerce operations assistant with Shopify, marketing, analytics, accounting, and productivity integrations. Query data, automate workflows, and manage your business.",
+  "author": {
+    "name": "gnestor"
+  }
+}
