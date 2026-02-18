@@ -1,0 +1,18 @@
+.DS_Store
+.env
+.claude/settings.local.json
+
+# Intermediate files
+assets/
+
+# Skill-generated schemas (can be regenerated)
+.claude/skills/google/bigquery/references/schemas/*.json
+.claude/skills/notion/references/schemas/*.json
+.claude/skills/postgresql/references/schemas/*.json
+
+# Deno
+node_modules/
+deno.lock
+
+# Downloads and working files
+downloads/

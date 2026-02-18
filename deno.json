@@ -1,0 +1,22 @@
+{
+  "nodeModulesDir": "auto",
+  "tasks": {
+    "install-chrome": "deno run -A npm:@puppeteer/browsers install chrome"
+  },
+  "imports": {
+    "@std/dotenv/load": "jsr:@std/dotenv@^0.225/load",
+    "@std/fs": "jsr:@std/fs@^1.0.4",
+    "@std/path": "jsr:@std/path@^1.0.8",
+    "@std/io": "jsr:@std/io@^0.225.0",
+    "@std/streams": "jsr:@std/streams@^1.0.7",
+    "sheetjs": "npm:xlsx@^0.18.5",
+    "postgres": "https://deno.land/x/postgres@v0.17.0/mod.ts",
+    "postgres/query": "https://deno.land/x/postgres@v0.17.0/query/query.ts",
+    "puppeteer": "https://deno.land/x/puppeteer@16.2.0/mod.ts",
+    "@notionhq/client": "npm:@notionhq/client@2.2.15",
+    "@anthropic-ai/sdk": "npm:@anthropic-ai/sdk@^0.30.1",
+    "lib/": "./lib/",
+    "downloads/": "./downloads/",
+    "workflows/": "./workflows/"
+  }
+}
