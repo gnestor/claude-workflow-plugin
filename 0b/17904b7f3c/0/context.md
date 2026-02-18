@@ -1,0 +1,13 @@
+# Session Context
+
+## User Prompts
+
+### Prompt 1
+
+Let's simplify the Data Sources section:
+
+1. Consolidate the Data Sources section into a single table
+2. Read the frontmatter of all skills and compare with the Data Sources table
+3. Revise the Data Sources table to only include details that are not included in the skills frontmatter
+4. Update skills frontmatter with those details (don't refer to other skills in a skill's frontmatter, only specific when and when not to use the skill)
+

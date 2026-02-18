@@ -1,0 +1,37 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "0b17904b7f3c",
+  "session_id": "e0eb614e-846b-4c66-bf4d-164fa5cab842",
+  "strategy": "manual-commit",
+  "created_at": "2026-02-18T09:11:51.266167Z",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    ".claude/skills/gorgias/SKILL.md",
+    ".claude/skills/instagram/SKILL.md",
+    ".claude/skills/klaviyo/SKILL.md",
+    ".claude/skills/meta-ads/SKILL.md",
+    ".claude/skills/postgresql/SKILL.md",
+    ".claude/skills/quickbooks/SKILL.md",
+    ".claude/skills/shopify/SKILL.md",
+    "AGENTS.md"
+  ],
+  "agent": "Claude Code",
+  "token_usage": {
+    "input_tokens": 569,
+    "cache_creation_tokens": 51254,
+    "cache_read_tokens": 686631,
+    "output_tokens": 173,
+    "api_call_count": 15
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-18T09:11:51.146138Z",
+    "agent_lines": 0,
+    "human_added": 1,
+    "human_modified": 53,
+    "human_removed": 0,
+    "total_committed": 51,
+    "agent_percentage": 0
+  },
+  "transcript_path": ".claude/projects/-Users-grant-Github-gnestor-agent-workspace/e0eb614e-846b-4c66-bf4d-164fa5cab842.jsonl"
+}
