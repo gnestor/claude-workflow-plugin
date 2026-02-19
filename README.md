@@ -16,80 +16,62 @@ claude --plugin-dir path/to/ecommerce
 
 ## Commands
 
-| Command | Description |
-|---------|-------------|
+| Command            | Description                              |
+| ------------------ | ---------------------------------------- |
 | `/ecommerce:setup` | Personalize the plugin for your business |
-| `/ecommerce:recap` | Document the current session and update knowledge base |
-| `/ecommerce:report` | Generate a structured analysis report |
-| `/ecommerce:seo-audit` | Run SEO analysis for a domain or product catalog |
 
 ## Skills
 
-| Domain | Skill |
-|--------|-------|
-| Shopify orders, products, customers, inventory | shopify |
-| Email/SMS marketing, campaigns, flows | klaviyo |
-| Customer support tickets | gorgias |
-| Accounting, financial reports | quickbooks |
-| Facebook/Instagram ad management | meta-ads |
-| Google ad management | google-ads |
-| Website traffic, sessions, conversions | google-analytics |
-| Search performance, SEO data | google-search-console |
-| Email management | gmail |
-| File storage, documents | google-drive |
-| Spreadsheets, financial metrics | google-sheets |
-| Cloud data warehouse | google-bigquery |
-| AI image/text generation | google-ai-studio |
-| Search keyword trends | google-trends |
-| Calendar, meetings | google-calendar |
-| Instagram organic content, UGC | instagram |
-| Pinterest boards, pins | pinterest |
-| Knowledge base, tasks, notes | notion |
-| Cross-source data joins, historical data | postgresql |
-| Digital assets, media library | air |
-| SEO research, keyword optimization | seo |
-| Browser automation | puppeteer |
-| Your business context | company |
-| Brand voice and style guidelines | brand-voice |
-| Report generation templates | reports |
-| Session documentation | recap |
+| Domain                                         | Skill                 |
+| ---------------------------------------------- | --------------------- |
+| Shopify orders, products, customers, inventory | shopify               |
+| Email/SMS marketing, campaigns, flows          | klaviyo               |
+| Customer support tickets                       | gorgias               |
+| Accounting, financial reports                  | quickbooks            |
+| Facebook/Instagram ad management               | meta-ads              |
+| Google ad management                           | google-ads            |
+| Website traffic, sessions, conversions         | google-analytics      |
+| Search performance, SEO data                   | google-search-console |
+| Email management                               | gmail                 |
+| File storage, documents                        | google-drive          |
+| Spreadsheets, financial metrics                | google-sheets         |
+| Cloud data warehouse                           | google-bigquery       |
+| AI image/text generation                       | google-ai-studio      |
+| Search keyword trends                          | google-trends         |
+| Calendar, meetings                             | google-calendar       |
+| Instagram organic content, UGC                 | instagram             |
+| Pinterest boards, pins                         | pinterest             |
+| Knowledge base, tasks, notes                   | notion                |
+| Cross-source data joins, historical data       | postgresql            |
+| Digital assets, media library                  | air                   |
+| SEO research, keyword optimization             | seo                   |
+| Browser automation                             | puppeteer             |
+| Brand voice and style guidelines               | brand-voice           |
 
 ## MCP Integrations
 
 This plugin uses MCP servers for API access. See [CONNECTORS.md](CONNECTORS.md) for the full list of integrations and how to configure them.
 
 **Hosted MCP servers** (handle auth automatically):
+
 - Shopify, Klaviyo, Notion, QuickBooks, Google Analytics, Google Ads
 
 **Local MCP servers** (included in `servers/`):
+
 - Gorgias, Air.inc, Google Workspace (Gmail, Drive, Sheets, Calendar), Google Search Console, Google BigQuery, Google AI Studio, Google Trends, Instagram, Pinterest, Meta Ads
 
 **Community MCP servers** (via npm):
+
 - PostgreSQL, Puppeteer
 
-## Agent Identity
+## Hooks
 
-You are a business operations assistant. You understand the user's business through connected tools and the **company** skill. You help automate workflows, analyze data, draft communications, and make decisions.
+This plugin includes hooks that automatically maintain workspace context after meaningful work:
 
-### Tone & Communication Style
+- **Stop hook** (prompt): After Claude finishes a task, a fast model evaluates whether context files should be updated. If so, Claude reviews its work and updates skills, company docs (`.claude/docs/COMPANY.md`), task tracking (`.claude/docs/TODO.md`), and session history (`.claude/docs/HISTORY.md`).
+- **PreCompact hook** (command): Before context compaction, key information from the transcript is saved to `.claude/docs/history/` so it isn't lost.
 
-Communicate with an intelligent, honest, direct, curious, and truth-seeking approach. Do not pander or provide false reassurance. Challenge assumptions when warranted and ask clarifying questions to understand the root of problems.
-
-### Decision-Making Authority
-
-**Consult before writing to external resources**: Always ask for approval before writing to databases, APIs, email, or any external system. Read-only operations (querying data, fetching information) can be performed autonomously.
-
-**Autonomous decisions**:
-- Data analysis and reporting
-- Drafting communications for review
-- Creating plans and recommendations
-- Researching information
-
-**Requires consultation**:
-- Executing mutations (creating/updating/deleting records)
-- Sending emails or messages
-- Making purchases or financial commitments
-- Changes that affect team workflows
+Business context and documentation preferences are created by `/ecommerce:setup` and stored in the user's project (`.claude/docs/` and `.claude/rules/`).
 
 ## Contributing
 
@@ -101,9 +83,11 @@ Communicate with an intelligent, honest, direct, curious, and truth-seeking appr
 
 ### Creating New Skills
 
-Add a directory to `skills/` with a `SKILL.md` file. Optionally include a `references/` subdirectory for supporting data.
+Use `/skill-creator` to create new skills, or manually add a directory to `skills/` with a `SKILL.md` file. Optionally include a `references/` subdirectory for supporting data.
 
 ### Adding MCP Servers
+
+Use `/mcp-builder` to create new MCP servers, or manually:
 
 1. Add the server entry to `.mcp.json`
 2. If building a custom server, add it to `servers/`
@@ -116,6 +100,9 @@ Add a directory to `skills/` with a `SKILL.md` file. Optionally include a `refer
 ecommerce/
 ├── .claude-plugin/plugin.json    # Plugin manifest
 ├── .mcp.json                     # MCP server declarations
+├── hooks/                        # Self-learning hooks
+│   ├── hooks.json                # Hook definitions (Stop + PreCompact)
+│   └── precompact-summary.sh     # Transcript summary before compaction
 ├── servers/                      # Custom local MCP servers
 ├── commands/                     # Slash command definitions
 ├── skills/                       # Domain expertise (context only)

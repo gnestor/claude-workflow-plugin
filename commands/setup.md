@@ -1,6 +1,6 @@
 ---
 name: setup
-description: Personalize the plugin for your business — identity, brand, integrations, and verification.
+description: Personalize the plugin for your business — identity, brand, documentation preferences, integrations, and verification.
 ---
 
 # Plugin Setup
@@ -22,8 +22,45 @@ Ask the user the following questions (one message, let them answer all at once):
 5. What tone should the agent use? (casual / professional / direct)
 
 **Actions after answers:**
-- Update `skills/company/SKILL.md` with the business overview
+- Create `.claude/docs/COMPANY.md` with the business overview, linking to sub-files for detailed context:
+  - `.claude/docs/team.md` — Team directory (create with the user's name/role as first entry)
+  - `.claude/docs/goals.md` — Business goals (create empty template)
+  - `.claude/docs/products.md` — Product catalog notes (create empty template)
+  - Additional files can be created later: `marketing.md`, `operations.md`, `finance.md`, etc.
 - Update `README.md` Agent Identity section with personalized identity, name, and tone preference
+- Add a reference to `.claude/docs/COMPANY.md` in the user's `CLAUDE.md` if not already present:
+  ```markdown
+  ## Workspace Context
+  Read `.claude/docs/COMPANY.md` for business context.
+  ```
+
+**COMPANY.md template:**
+```markdown
+# [Business Name]
+
+[Business description from user's answer]
+
+**Owner:** [Name] ([Role])
+
+## Quick Reference
+
+- Website: [ask or leave blank]
+- Industry: [inferred from description]
+
+## Detailed Context
+
+| File | Description |
+|------|-------------|
+| [team.md](team.md) | Team directory with roles and contact info |
+| [goals.md](goals.md) | Business goals and priorities |
+| [products.md](products.md) | Product catalog and details |
+
+Add more context files as needed (marketing.md, operations.md, finance.md, etc.).
+
+## Current State
+
+[To be populated as the agent learns about the business through conversations]
+```
 
 ### Phase 2: Brand (optional)
 
@@ -40,7 +77,36 @@ If the user says no or wants to skip, acknowledge and move on.
 **Actions after answers:**
 - Update `skills/brand-voice/SKILL.md` with the brand details, filling in the template tables and voice section
 
-### Phase 3: Integrations
+### Phase 3: Documentation Preferences
+
+Ask the user:
+
+1. How should work be documented? (detailed reports / brief summaries / minimal notes)
+2. What tone for documentation? (formal / informal / technical)
+3. Where should reports be saved? (local markdown files in `reports/` / Notion / Google Docs)
+4. How much session history should be kept? (full session logs / summaries only / minimal)
+
+**Actions after answers:**
+- Create `.claude/rules/documentation.md` in the user's project with the preferences:
+
+```markdown
+# Documentation Preferences
+
+## Style
+- Detail level: [detailed reports / brief summaries / minimal notes]
+- Tone: [formal / informal / technical]
+- Audience: [business / technical / mixed]
+
+## Location
+- Reports: [local markdown files in `reports/` / Notion database / Google Docs folder]
+- History: `.claude/docs/history/`
+
+## History
+- HISTORY.md: One-line summary entries with date and description
+- Detailed files: [full session documentation / key decisions only / skip]
+```
+
+### Phase 4: Integrations
 
 Present the available integrations from `CONNECTORS.md` and ask which ones the user needs. Group them by type:
 
@@ -72,7 +138,7 @@ For each integration the user selects:
 
 **Important**: Environment variables are set in the MCP server configuration (`.mcp.json` `env` entries or Claude Desktop settings). See each server's documentation for the required variable names.
 
-### Phase 4: Verify
+### Phase 5: Verify
 
 For each configured integration:
 1. Attempt a simple read-only operation using the `~~category` tools to verify the connection works
@@ -102,6 +168,7 @@ After verification, show a summary:
 **User:** [name] ([role])
 **Tone:** [preference]
 **Brand:** [configured / skipped]
+**Documentation:** [detail level], [tone], saved to [location]
 **Integrations:**
   - [service]: Connected
   - [service]: Connected
@@ -117,7 +184,8 @@ Suggest first tasks based on configured integrations:
 ## Re-running Setup
 
 If the user re-runs setup, ask which phase they want to update rather than re-running everything. Offer:
-1. Update identity
+1. Update identity & company context
 2. Update brand guidelines
-3. Add/update integrations
-4. Re-verify connections
+3. Update documentation preferences
+4. Add/update integrations
+5. Re-verify connections
