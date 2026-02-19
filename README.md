@@ -14,11 +14,32 @@ Or for local development:
 claude --plugin-dir path/to/ecommerce
 ```
 
-## Commands
+## Getting Started
 
-| Command            | Description                              |
-| ------------------ | ---------------------------------------- |
-| `/ecommerce:setup` | Personalize the plugin for your business |
+After installing, say "customize" or run `/ecommerce:customize` to personalize the plugin:
+
+1. **Scan** — The plugin scans its skills for `~~category` references and checks which MCP servers are connected
+2. **Identity** — Set your business name, role, and preferences
+3. **Connect** — Walk through configuring any unconfigured integrations (Shopify, Klaviyo, etc.)
+4. **Discover** — Auto-populate workspace context from live data (store name, products, team, traffic)
+
+You can re-run customization anytime to connect new services or refresh discovered context.
+
+## Directory Structure
+
+```
+ecommerce/
+├── .claude-plugin/plugin.json    # Plugin manifest
+├── .mcp.json                     # MCP server declarations
+├── hooks/                        # Self-learning hooks
+│   ├── hooks.json                # Hook definitions (Stop + PreCompact)
+│   └── precompact-summary.sh     # Transcript summary before compaction
+├── servers/                      # Custom local MCP servers
+├── skills/                       # Domain expertise (context only)
+├── CONNECTORS.md                 # Tool integration documentation
+├── README.md                     # This file
+└── LICENSE
+```
 
 ## Skills
 
@@ -47,8 +68,10 @@ claude --plugin-dir path/to/ecommerce
 | SEO research, keyword optimization             | seo                   |
 | Browser automation                             | puppeteer             |
 | Brand voice and style guidelines               | brand-voice           |
+| Personalize plugin, connect services, discover context | customize             |
+| Contribute plugin improvements upstream        | contribute            |
 
-## MCP Integrations
+## Connectors
 
 This plugin uses MCP servers for API access. See [CONNECTORS.md](CONNECTORS.md) for the full list of integrations and how to configure them.
 
@@ -71,7 +94,7 @@ This plugin includes hooks that automatically maintain workspace context after m
 - **Stop hook** (prompt): After Claude finishes a task, a fast model evaluates whether context files should be updated. If so, Claude reviews its work and updates skills, company docs (`.claude/docs/COMPANY.md`), task tracking (`.claude/docs/TODO.md`), and session history (`.claude/docs/HISTORY.md`).
 - **PreCompact hook** (command): Before context compaction, key information from the transcript is saved to `.claude/docs/history/` so it isn't lost.
 
-Business context and documentation preferences are created by `/ecommerce:setup` and stored in the user's project (`.claude/docs/` and `.claude/rules/`).
+Business context and documentation preferences are created by `/ecommerce:customize` and stored in the user's project (`.claude/docs/` and `.claude/rules/`).
 
 ## Contributing
 
@@ -85,6 +108,17 @@ Business context and documentation preferences are created by `/ecommerce:setup`
 
 Use `/skill-creator` to create new skills, or manually add a directory to `skills/` with a `SKILL.md` file. Optionally include a `references/` subdirectory for supporting data.
 
+### From within the plugin
+
+After working with the plugin, improvements to skills and workflows can be
+contributed back automatically:
+
+1. Run `/ecommerce:contribute` or say "contribute my improvements"
+2. Claude classifies changes as generic (shareable) vs. company-specific (private)
+3. Generic improvements are submitted as a PR or emailed as feedback
+
+Configure contribution preferences during `/ecommerce:customize` or in `.claude/rules/contribution.md`.
+
 ### Adding MCP Servers
 
 Use `/mcp-builder` to create new MCP servers, or manually:
@@ -94,19 +128,27 @@ Use `/mcp-builder` to create new MCP servers, or manually:
 3. Create a corresponding skill in `skills/`
 4. Update `CONNECTORS.md` with the new category mapping
 
-## Directory Structure
+## Distributing
 
+### Publishing
+
+Update `.claude-plugin/plugin.json` with the current version, then publish:
+
+```bash
+claude plugins publish
 ```
-ecommerce/
-├── .claude-plugin/plugin.json    # Plugin manifest
-├── .mcp.json                     # MCP server declarations
-├── hooks/                        # Self-learning hooks
-│   ├── hooks.json                # Hook definitions (Stop + PreCompact)
-│   └── precompact-summary.sh     # Transcript summary before compaction
-├── servers/                      # Custom local MCP servers
-├── commands/                     # Slash command definitions
-├── skills/                       # Domain expertise (context only)
-├── CONNECTORS.md                 # Tool integration documentation
-├── README.md                     # This file
-└── LICENSE
-```
+
+This packages the plugin and makes it available via `claude plugins add ecommerce`.
+
+### Forking for Your Industry
+
+This plugin is built for e-commerce but the structure works for any domain. To create your own:
+
+1. Fork this repo
+2. Update `.claude-plugin/plugin.json` with your plugin name and description
+3. Replace skills with your domain expertise
+4. Replace MCP servers with your integrations
+5. Update `CONNECTORS.md` with your `~~category` mappings
+6. Publish: `claude plugins publish`
+
+The `customize`, `contribute`, and `brand-voice` skills are domain-agnostic and work in any fork.
