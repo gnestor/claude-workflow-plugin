@@ -92,7 +92,6 @@ This plugin uses MCP servers for API access. See [CONNECTORS.md](CONNECTORS.md) 
 This plugin includes hooks that automatically maintain workspace context after meaningful work:
 
 - **Stop hook** (prompt): After Claude finishes a task, a fast model evaluates whether context files should be updated. If so, Claude reviews its work and updates skills, company docs (`.claude/docs/COMPANY.md`), task tracking (`.claude/docs/TODO.md`), and session history (`.claude/docs/HISTORY.md`).
-- **PreCompact hook** (command): Before context compaction, key information from the transcript is saved to `.claude/docs/history/` so it isn't lost.
 
 Business context and documentation preferences are created by `/ecommerce:customize` and stored in the user's project (`.claude/docs/` and `.claude/rules/`).
 
