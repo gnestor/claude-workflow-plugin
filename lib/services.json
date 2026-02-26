@@ -1,0 +1,360 @@
+{
+  "gorgias": {
+    "name": "Gorgias",
+    "category": "customer-support",
+    "authType": "basic",
+    "credentials": [
+      { "key": "domain", "label": "Gorgias subdomain", "secret": false, "help": "Just the subdomain, e.g. 'mystore'" },
+      { "key": "email", "label": "Agent email", "secret": false },
+      { "key": "api_token", "label": "API token", "secret": true, "help": "Settings > REST API" }
+    ],
+    "baseUrl": "https://{domain}.gorgias.com/api",
+    "auth": {
+      "type": "header",
+      "header": "Authorization",
+      "value": "Basic {base64:{email}:{api_token}}"
+    },
+    "defaultHeaders": {
+      "Content-Type": "application/json",
+      "Accept": "application/json"
+    },
+    "testEndpoint": { "method": "GET", "path": "/account" },
+    "envMap": {
+      "GORGIAS_DOMAIN": "domain",
+      "GORGIAS_EMAIL": "email",
+      "GORGIAS_API_TOKEN": "api_token"
+    }
+  },
+  "air": {
+    "name": "Air.inc",
+    "category": "dam",
+    "authType": "api-key",
+    "credentials": [
+      { "key": "api_key", "label": "API key", "secret": true, "help": "Settings > API > Generate key" },
+      { "key": "workspace_id", "label": "Workspace ID", "secret": false }
+    ],
+    "baseUrl": "https://api.air.inc/v1",
+    "auth": {
+      "type": "headers",
+      "headers": {
+        "x-api-key": "{api_key}",
+        "x-air-workspace-id": "{workspace_id}"
+      }
+    },
+    "defaultHeaders": {
+      "Content-Type": "application/json",
+      "Accept": "application/json"
+    },
+    "testEndpoint": { "method": "GET", "path": "/boards?limit=1" },
+    "envMap": {
+      "AIR_API_KEY": "api_key",
+      "AIR_WORKSPACE_ID": "workspace_id"
+    }
+  },
+  "google": {
+    "name": "Google",
+    "category": "workspace",
+    "authType": "oauth2",
+    "credentials": [
+      { "key": "access_token", "label": "Access token", "secret": true, "auto": true },
+      { "key": "refresh_token", "label": "Refresh token", "secret": true, "auto": true },
+      { "key": "token_expiry", "label": "Token expiry", "secret": false, "auto": true },
+      { "key": "client_id", "label": "OAuth client ID", "secret": false, "auto": true },
+      { "key": "client_secret", "label": "OAuth client secret", "secret": true, "auto": true },
+      { "key": "cloud_project", "label": "Cloud project ID", "secret": false, "help": "For BigQuery" }
+    ],
+    "tokenUrl": "https://oauth2.googleapis.com/token",
+    "oauthProxy": "https://workflow-auth.hammies.workers.dev",
+    "aliases": ["google-workspace", "google-bigquery", "google-search-console", "google-trends", "google-analytics", "google-ads"],
+    "auth": {
+      "type": "header",
+      "header": "Authorization",
+      "value": "Bearer {access_token}"
+    },
+    "testEndpoint": { "method": "GET", "url": "https://www.googleapis.com/oauth2/v1/userinfo" },
+    "envMap": {
+      "GOOGLE_CLIENT_ID": "client_id",
+      "GOOGLE_CLIENT_SECRET": "client_secret",
+      "GOOGLE_REFRESH_TOKEN": "refresh_token",
+      "GOOGLE_CLOUD_PROJECT": "cloud_project"
+    }
+  },
+  "google-ai-studio": {
+    "name": "Google AI Studio",
+    "category": "ai-generation",
+    "authType": "api-key-param",
+    "credentials": [
+      { "key": "api_key", "label": "Gemini API key", "secret": true, "help": "aistudio.google.com > Get API key" }
+    ],
+    "baseUrl": "https://generativelanguage.googleapis.com/v1beta",
+    "auth": {
+      "type": "query-param",
+      "param": "key",
+      "value": "{api_key}"
+    },
+    "defaultHeaders": {
+      "Content-Type": "application/json"
+    },
+    "testEndpoint": { "method": "GET", "path": "/models" },
+    "envMap": {
+      "GEMINI_API_KEY": "api_key"
+    }
+  },
+  "google-trends": {
+    "name": "Google Trends",
+    "category": "search-trends",
+    "authType": "api-key-param",
+    "credentials": [
+      { "key": "api_key", "label": "Google Trends API key", "secret": true }
+    ],
+    "baseUrl": "https://trends.googleapis.com/trends/v1beta",
+    "auth": {
+      "type": "query-param",
+      "param": "key",
+      "value": "{api_key}"
+    },
+    "defaultHeaders": {
+      "Content-Type": "application/json"
+    },
+    "testEndpoint": { "method": "GET", "path": "/graph?terms=test&time=now%207-d" },
+    "envMap": {
+      "GOOGLE_TRENDS_API_KEY": "api_key"
+    }
+  },
+  "shopify": {
+    "name": "Shopify",
+    "category": "e-commerce",
+    "authType": "bearer",
+    "credentials": [
+      { "key": "store_domain", "label": "Store domain", "secret": false, "help": "e.g. mystore.myshopify.com" },
+      { "key": "access_token", "label": "Admin API access token", "secret": true, "help": "Settings > Apps > Develop apps > Create > Install > Copy Admin API token" }
+    ],
+    "baseUrl": "https://{store_domain}/admin/api/2025-01",
+    "auth": {
+      "type": "header",
+      "header": "X-Shopify-Access-Token",
+      "value": "{access_token}"
+    },
+    "defaultHeaders": {
+      "Content-Type": "application/json"
+    },
+    "testEndpoint": { "method": "GET", "path": "/shop.json" },
+    "envMap": {
+      "SHOPIFY_STORE_DOMAIN": "store_domain",
+      "SHOPIFY_ACCESS_TOKEN": "access_token",
+      "SHOPIFY_API_TOKEN": "access_token"
+    }
+  },
+  "klaviyo": {
+    "name": "Klaviyo",
+    "category": "email-marketing",
+    "authType": "bearer",
+    "credentials": [
+      { "key": "api_key", "label": "Private API key", "secret": true, "help": "Settings > API Keys > Create Private API Key" }
+    ],
+    "baseUrl": "https://a.klaviyo.com/api",
+    "auth": {
+      "type": "header",
+      "header": "Authorization",
+      "value": "Klaviyo-API-Key {api_key}"
+    },
+    "defaultHeaders": {
+      "Accept": "application/json",
+      "Content-Type": "application/json",
+      "revision": "2024-10-15"
+    },
+    "testEndpoint": { "method": "GET", "path": "/accounts/" },
+    "envMap": {
+      "KLAVIYO_PRIVATE_KEY": "api_key",
+      "KLAVIYO_API_KEY": "api_key"
+    }
+  },
+  "notion": {
+    "name": "Notion",
+    "category": "knowledge-base",
+    "authType": "bearer",
+    "credentials": [
+      { "key": "api_key", "label": "Internal integration token", "secret": true, "help": "notion.so/my-integrations > New integration > Copy token" }
+    ],
+    "baseUrl": "https://api.notion.com/v1",
+    "auth": {
+      "type": "header",
+      "header": "Authorization",
+      "value": "Bearer {api_key}"
+    },
+    "defaultHeaders": {
+      "Content-Type": "application/json",
+      "Notion-Version": "2022-06-28"
+    },
+    "testEndpoint": { "method": "GET", "path": "/users/me" },
+    "envMap": {
+      "NOTION_API_KEY": "api_key",
+      "NOTION_TOKEN": "api_key"
+    }
+  },
+  "quickbooks": {
+    "name": "QuickBooks",
+    "category": "accounting",
+    "authType": "oauth2",
+    "credentials": [
+      { "key": "access_token", "label": "Access token", "secret": true, "auto": true },
+      { "key": "refresh_token", "label": "Refresh token", "secret": true, "auto": true },
+      { "key": "token_expiry", "label": "Token expiry", "secret": false, "auto": true },
+      { "key": "realm_id", "label": "Company ID (Realm ID)", "secret": false }
+    ],
+    "tokenUrl": "https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer",
+    "oauthProxy": "https://workflow-auth.hammies.workers.dev",
+    "baseUrl": "https://quickbooks.api.intuit.com/v3/company/{realm_id}",
+    "auth": {
+      "type": "header",
+      "header": "Authorization",
+      "value": "Bearer {access_token}"
+    },
+    "defaultHeaders": {
+      "Accept": "application/json",
+      "Content-Type": "application/json"
+    },
+    "testEndpoint": { "method": "GET", "path": "/companyinfo/{realm_id}" },
+    "envMap": {
+      "QUICKBOOKS_REALM_ID": "realm_id",
+      "QUICKBOOKS_ACCESS_TOKEN": "access_token",
+      "QUICKBOOKS_REFRESH_TOKEN": "refresh_token"
+    }
+  },
+  "instagram": {
+    "name": "Instagram",
+    "category": "social-media",
+    "authType": "token-param",
+    "credentials": [
+      { "key": "access_token", "label": "Instagram access token", "secret": true, "help": "Meta Developer portal > Instagram Graph API > Generate token" }
+    ],
+    "baseUrl": "https://graph.instagram.com",
+    "auth": {
+      "type": "query-param",
+      "param": "access_token",
+      "value": "{access_token}"
+    },
+    "defaultHeaders": {
+      "Content-Type": "application/json"
+    },
+    "testEndpoint": { "method": "GET", "path": "/me?fields=id,username" },
+    "envMap": {
+      "INSTAGRAM_ACCESS_TOKEN": "access_token",
+      "FACEBOOK_ACCESS_TOKEN": "access_token"
+    }
+  },
+  "pinterest": {
+    "name": "Pinterest",
+    "category": "social-media",
+    "authType": "oauth2",
+    "credentials": [
+      { "key": "access_token", "label": "Access token", "secret": true },
+      { "key": "refresh_token", "label": "Refresh token", "secret": true, "auto": true },
+      { "key": "token_expiry", "label": "Token expiry", "secret": false, "auto": true },
+      { "key": "client_id", "label": "App ID", "secret": false, "auto": true },
+      { "key": "client_secret", "label": "App secret", "secret": true, "auto": true }
+    ],
+    "tokenUrl": "https://api.pinterest.com/v5/oauth/token",
+    "oauthProxy": "https://workflow-auth.hammies.workers.dev",
+    "baseUrl": "https://api.pinterest.com/v5",
+    "auth": {
+      "type": "header",
+      "header": "Authorization",
+      "value": "Bearer {access_token}"
+    },
+    "defaultHeaders": {
+      "Content-Type": "application/json"
+    },
+    "testEndpoint": { "method": "GET", "path": "/user_account" },
+    "envMap": {
+      "PINTEREST_ACCESS_TOKEN": "access_token",
+      "PINTEREST_CLIENT_ID": "client_id",
+      "PINTEREST_CLIENT_SECRET": "client_secret",
+      "PINTEREST_REFRESH_TOKEN": "refresh_token"
+    }
+  },
+  "meta-ads": {
+    "name": "Meta Ads",
+    "category": "paid-social",
+    "authType": "token-param",
+    "credentials": [
+      { "key": "access_token", "label": "Access token", "secret": true, "help": "Meta Business Suite > System Users > Generate token" },
+      { "key": "ad_account_id", "label": "Ad account ID", "secret": false, "help": "Format: act_XXXXXXXXX" }
+    ],
+    "baseUrl": "https://graph.facebook.com/v24.0",
+    "auth": {
+      "type": "query-param",
+      "param": "access_token",
+      "value": "{access_token}"
+    },
+    "defaultHeaders": {
+      "Content-Type": "application/json"
+    },
+    "testEndpoint": { "method": "GET", "path": "/me" },
+    "envMap": {
+      "META_ACCESS_TOKEN": "access_token",
+      "META_AD_ACCOUNT_ID": "ad_account_id"
+    }
+  },
+  "postgresql": {
+    "name": "PostgreSQL",
+    "category": "database",
+    "authType": "connection-string",
+    "credentials": [
+      { "key": "database_url", "label": "Connection string", "secret": true, "help": "postgresql://user:pass@host:5432/db" }
+    ],
+    "testEndpoint": { "query": "SELECT 1" },
+    "envMap": {
+      "DATABASE_URL": "database_url",
+      "POSTGRES_URL": "database_url"
+    }
+  },
+  "google-ads": {
+    "name": "Google Ads",
+    "category": "search-ads",
+    "authType": "oauth2",
+    "parentService": "google",
+    "credentials": [
+      { "key": "developer_token", "label": "Developer token", "secret": true, "help": "Google Ads API Center > API Access" },
+      { "key": "customer_id", "label": "Customer ID", "secret": false, "help": "10-digit ID without dashes" }
+    ],
+    "baseUrl": "https://googleads.googleapis.com/v18",
+    "auth": {
+      "type": "headers",
+      "headers": {
+        "Authorization": "Bearer {access_token}",
+        "developer-token": "{developer_token}"
+      }
+    },
+    "defaultHeaders": {
+      "Content-Type": "application/json"
+    },
+    "testEndpoint": { "method": "GET", "path": "/customers/{customer_id}" },
+    "envMap": {
+      "GOOGLE_ADS_DEVELOPER_TOKEN": "developer_token",
+      "GOOGLE_ADS_CUSTOMER_ID": "customer_id"
+    }
+  },
+  "google-analytics": {
+    "name": "Google Analytics",
+    "category": "analytics",
+    "authType": "oauth2",
+    "parentService": "google",
+    "credentials": [
+      { "key": "property_id", "label": "GA4 Property ID", "secret": false, "help": "e.g. 123456789" }
+    ],
+    "baseUrl": "https://analyticsdata.googleapis.com/v1beta",
+    "auth": {
+      "type": "header",
+      "header": "Authorization",
+      "value": "Bearer {access_token}"
+    },
+    "defaultHeaders": {
+      "Content-Type": "application/json"
+    },
+    "testEndpoint": { "method": "GET", "url": "https://analyticsadmin.googleapis.com/v1beta/accountSummaries" },
+    "envMap": {
+      "GA_PROPERTY_ID": "property_id"
+    }
+  }
+}

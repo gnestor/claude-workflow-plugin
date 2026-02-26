@@ -1,17 +1,19 @@
 ---
 name: klaviyo
 description: Primary source of truth for all Klaviyo email and SMS marketing data including campaigns, flows, metrics, events, lists, segments, and profiles. Activate when the user asks about email campaigns, marketing automation, email flows, or subscriber data. Not for cross-source analysis joining marketing data with other systems.
+category: ~~email-marketing
+service: Klaviyo
 ---
 
-# Klaviyo API Integration
+# Klaviyo
 
 ## Purpose
 
-This skill enables direct interaction with the Klaviyo API for email and SMS marketing using `~~email-marketing` tools. It translates natural language questions into API calls, executes them, and interprets the results. Provides access to campaigns, flows, metrics, events, lists, segments, profiles, and templates.
+This skill enables direct interaction with the Klaviyo API for email and SMS marketing using the client script. It translates natural language questions into API calls, executes them, and interprets the results. Provides access to campaigns, flows, metrics, events, lists, segments, profiles, and templates.
 
 **Use this skill for EMAIL and SMS MARKETING data from Klaviyo.**
 
-Authentication is handled by the MCP server configuration.
+Authentication is handled automatically by lib/auth.js.
 
 ## When to Use
 
@@ -34,135 +36,93 @@ Activate this skill when the user:
 - **Website analytics**: Use google-analytics skill for traffic and visitor data
 - **Historical analysis across sources**: Use postgresql or bigquery skill
 
-## Available Tools
+## Client Script
 
-The `~~email-marketing` MCP server provides tools for:
-- **Account** - Get account details and configuration
-- **Campaigns** - List, get, create campaigns; get performance reports; get campaign messages and templates
-- **Flows** - List, get flows; get flow performance reports
-- **Metrics** - List metrics, get metric details, query metric aggregates
-- **Lists & Segments** - List, get, manage subscriber lists and segments
-- **Profiles** - List, get, create profiles; subscribe/unsubscribe from lists
-- **Events** - List and create/track events
-- **Templates** - List, get, create email templates
+**Path:** `skills/klaviyo/scripts/client.js`
 
-## Natural Language to API Translation
+### Commands
 
-When a user asks a natural language question about Klaviyo data, follow this process:
+| Command | Description |
+|---------|-------------|
+| `test-auth` | Verify authentication and API access |
+| `get-account` | Get account details and configuration |
+| `list-campaigns` | List campaigns with optional filters |
+| `get-campaign` | Get details for a specific campaign |
+| `get-campaign-report` | Get performance report for a campaign |
+| `list-flows` | List flows and automations |
+| `get-flow` | Get details for a specific flow |
+| `get-flow-report` | Get performance report for a flow |
+| `list-profiles` | List subscriber profiles |
+| `get-profile` | Get details for a specific profile |
+| `create-profile` | Create a new profile |
+| `update-profile` | Update an existing profile |
+| `subscribe` | Subscribe a profile to a list |
+| `unsubscribe` | Unsubscribe a profile from a list |
+| `list-lists` | List subscriber lists |
+| `get-list` | Get details for a specific list |
+| `list-segments` | List segments |
+| `get-segment` | Get details for a specific segment |
+| `list-metrics` | List all available metrics |
+| `get-metric` | Get details for a specific metric |
+| `query-metric-aggregates` | Query aggregated metric data with filters |
+| `get-events` | List events with optional filters |
+| `get-email-template` | Get an email template |
+| `create-email-template` | Create a new email template |
+| `assign-template` | Assign a template to a campaign message |
+| `upload-image` | Upload an image from a URL |
 
-### Step 1: Identify the Resource Type
+## Key API Concepts
 
-Map natural language terms to Klaviyo resources:
-
-- "email campaigns", "campaigns" -> campaigns
-- "flows", "automations", "sequences" -> flows
-- "metrics", "events", "tracking" -> metrics/events
-- "subscribers", "email list", "audience" -> lists/segments
-- "customers", "profiles", "contacts" -> profiles
-- "templates", "email templates" -> templates
-
-### Step 2: Determine the Operation
-
-| User Intent          | Operation                        |
-| -------------------- | -------------------------------- |
-| "How did X perform?" | campaign-report or flow-report   |
-| "List all X"         | list-campaigns, list-flows, etc. |
-| "Show me X events"   | list-metrics then metric-aggregates |
-| "Add to list"        | subscribe                        |
-| "Create campaign"    | create-campaign                  |
-| "Track event"        | create-event                     |
-
-### Step 3: Extract Parameters
-
-**Time ranges:**
-
-- "last month" -> filter with datetime >= 30 days ago
-- "this week" -> filter with datetime >= start of week
-- "January 2024" -> filter 2024-01-01 to 2024-02-01
-
-**Channels:**
-
-- "email campaigns" -> channel=email
-- "SMS campaigns" -> channel=sms
-
-**Metrics:**
-
-- To query a specific metric by name, first list metrics to find the metric ID, then use metric aggregates
-
-### Step 4: Build the Request
-
-For metric aggregates (key use case):
-
-1. Find metric ID using list-metrics
-2. Build aggregates request with:
-   - `metric_id`: The metric ID
-   - `measurements`: ["count", "unique", "sum_value"]
-   - `interval`: "day", "week", or "month"
-   - `filter`: Date range filters
-   - `timezone`: User's timezone
+- **Base URL:** `api.klaviyo.com/api/`
+- **Format:** JSON:API — trailing slashes required on all endpoints
+- **Rate limits:** Endpoint-specific (see table below)
+- **Pagination:** Cursor-based via JSON:API links
+- **Metric aggregates:** Require metric ID lookup first via `list-metrics`
 
 ## Common Metric IDs
 
 Quick reference for frequently used metrics:
 
-| Metric         | ID       | Measurements                   |
-| -------------- | -------- | ------------------------------ |
-| Placed Order   | `QYEYTD` | `count`, `sum_value` (revenue) |
-| Received Email | `S5szs7` | `count`                        |
-| Opened Email   | `Y5KgAb` | `count`                        |
-| Clicked Email  | `V7UybQ` | `count`                        |
-| Received SMS   | `RSZf6M` | `count`                        |
+| Metric | ID | Measurements |
+|--------|-----|------------------------------|
+| Placed Order | `QYEYTD` | `count`, `sum_value` (revenue) |
+| Received Email | `S5szs7` | `count` |
+| Opened Email | `Y5KgAb` | `count` |
+| Clicked Email | `V7UybQ` | `count` |
+| Received SMS | `RSZf6M` | `count` |
 
-Use list-metrics to find additional metric IDs or verify these.
+Use `list-metrics` to find additional metric IDs or verify these.
 
 ## Rate Limits
 
-Klaviyo has endpoint-specific rate limits:
+| Endpoint Type | Burst | Steady |
+|---------------|-------|--------|
+| Default (GET) | 10/s | 150/min |
+| Metric Aggregates | 3/s | 60/min |
+| Campaign Reports | 1/s | 2/min |
+| Flow Reports | 3/s | 60/min |
 
-| Endpoint Type     | Burst | Steady  |
-| ----------------- | ----- | ------- |
-| Default (GET)     | 10/s  | 150/min |
-| Metric Aggregates | 3/s   | 60/min  |
-| Campaign Reports  | 1/s   | 2/min   |
-| Flow Reports      | 3/s   | 60/min  |
+If rate limited: wait for the reset time indicated in response headers, reduce request frequency, and cache reporting results when possible.
 
-If rate limited:
+## Metric Aggregates Workflow
 
-- Wait for the reset time indicated in response headers
-- Reduce request frequency
-- For reporting endpoints, cache results when possible
+To query a specific metric:
 
-## Security Notes
+1. Find metric ID using `list-metrics`
+2. Call `query-metric-aggregates` with:
+   - `metric_id`: The metric ID
+   - `measurements`: `["count", "unique", "sum_value"]`
+   - `interval`: `"day"`, `"week"`, or `"month"`
+   - `filter`: Date range filters (e.g., `greater-or-equal(datetime,2024-01-01T00:00:00Z)`)
+   - `timezone`: User's timezone
 
-- Never expose API keys in output
-- Be cautious with operations that modify subscriber data
-- Warn before bulk subscribe/unsubscribe operations
-- Campaigns are created in draft mode by default
+## For Complex Operations
 
-## Troubleshooting
+```javascript
+import { apiRequest } from '../../../lib/http.js';
+const data = await apiRequest('klaviyo', '/campaigns/');
+```
 
-**"Authentication failed" or "Invalid API key"**
-
-- Verify the MCP server is properly configured
-- Ensure the key is a Private API key (not public)
-
-**"Missing required scope"**
-
-- The API key needs additional permissions
-- Check MCP server configuration for required scopes
-
-**"Resource not found"**
-
-- Verify the ID is correct
-- Check the resource type matches the endpoint
-
-**"Rate limit exceeded"**
-
-- Wait for the reset time
-- Reduce request frequency
-- For reporting, use less frequent intervals
-
-**"Invalid filter syntax"**
-
-- Check filter format: `greater-or-equal(datetime,2024-01-01T00:00:00Z)`
-- Ensure datetime is in ISO 8601 format with timezone
+## Reference Files
+- [examples.md](references/examples.md) — Usage patterns and queries
+- [documentation.md](references/documentation.md) — Full API documentation

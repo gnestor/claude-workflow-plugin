@@ -1,13 +1,15 @@
 ---
 name: instagram
 description: Instagram integration for posting, insights, comments, UGC downloads, and user research. Activate when the user asks about Instagram organic content, insights, engagement, or UGC. Not for paid Instagram/Facebook advertising or cross-platform analytics.
+category: ~~social-media
+service: Instagram
 ---
 
-# Instagram API Integration
+# Instagram
 
 ## Purpose
 
-This skill enables comprehensive Instagram management through `~~social-media` tools providing multiple data sources:
+This skill enables comprehensive Instagram management through the client script, providing multiple data sources:
 
 1. **Instagram Graph API** - Official API for posting, insights, comments, account management
 2. **UGC tools** - Download tagged posts, user research, hashtag exploration
@@ -15,7 +17,7 @@ This skill enables comprehensive Instagram management through `~~social-media` t
 
 **Use this skill for INSTAGRAM data, content management, and engagement.**
 
-Authentication is handled by the MCP server configuration.
+Authentication is handled automatically by lib/auth.js.
 
 ## When to Use
 
@@ -37,6 +39,43 @@ Activate this skill when the user:
 - **Shopify product images**: Use shopify skill for product media
 - **Historical Instagram data analysis**: Use postgresql skill with Instagram tables for complex joins
 
+## Client Script
+
+**Path:** `skills/instagram/scripts/client.js`
+
+### Commands
+
+| Command | Description |
+|---------|-------------|
+| `test-auth` | Verify authentication and API access |
+| `get-profile` | Get profile info and metadata |
+| `get-account-insights` | Get account-level insights and metrics |
+| `list-media` | List media posts with optional filters |
+| `get-media` | Get details for a specific media post |
+| `get-media-insights` | Get performance insights for a specific post |
+| `list-stories` | List active stories |
+| `get-story-insights` | Get insights for a specific story |
+| `list-comments` | List comments on a media post |
+| `get-comment` | Get details for a specific comment |
+| `reply-to-comment` | Reply to a comment |
+| `delete-comment` | Delete a comment |
+| `hide-comment` | Hide a comment from public view |
+| `send-private-reply` | Send a DM in response to a comment |
+| `list-tagged-media` | List posts the account is tagged in |
+| `create-container` | Create a media container (image, video, reel, carousel) |
+| `create-carousel-item` | Create a carousel item for a multi-image post |
+| `create-story` | Create a story container |
+| `get-container-status` | Check processing status of a media container |
+| `publish-container` | Publish a finished container to the feed |
+
+## Key API Concepts
+
+- **Base URL:** `graph.instagram.com` (Graph API)
+- **Publishing:** Container-based workflow (create container, check status, publish)
+- **Rate limits:** 200 calls/hour (Graph API), 25 posts/24 hours
+- **Insights caching:** Data cached for 1-2 hours by Instagram
+- **Media URLs:** Must be publicly accessible for publishing
+
 ## Data Source Selection
 
 | Use Case | Data Source | Reason |
@@ -52,56 +91,6 @@ Activate this skill when the user:
 | Research public users | UGC tools | Profile info, posts, stories |
 | Download hashtag posts | UGC tools | Hashtag.get_posts() |
 
-## Available Tools
-
-The `~~social-media` MCP server provides tools for:
-
-### Graph API Operations
-- **Profile** - Get profile info, account insights
-- **Media** - List media, get details, get insights, download media, list tagged media
-- **Comments** - List, get, reply to, delete, hide comments
-- **Publishing** - Create containers (image, video, reel, carousel), check status, publish, create stories
-- **Private replies** - Send DMs in response to comments
-- **Stories** - List stories, get story insights
-
-### UGC & Research Operations
-- **Downloads** - Download tagged posts, hashtag posts, specific posts, profile media
-- **User research** - Get profile info, followers, following, post info, comments
-- **Stories & Highlights** - Download active stories and highlights
-
-## Natural Language Translation
-
-### Step 1: Identify the Operation Type
-
-| User Says | Operation Type |
-|-----------|---------------|
-| "show", "list", "get", "fetch", "find" | Read data |
-| "post", "publish", "share", "upload" | Publishing |
-| "reply", "respond", "comment" | Engagement |
-| "download", "save", "get media" | Download |
-| "analyze", "insights", "performance" | Analytics |
-| "who tagged us", "UGC", "tagged posts" | UGC tools |
-| "followers", "following", "research" | User research |
-
-### Step 2: Choose Data Source
-
-| Context | Data Source |
-|---------|-------------|
-| "this week", "today", "recent" (analytics) | Graph API |
-| "last month", "trends", "over time" | PostgreSQL |
-| "download tagged posts", "UGC" | UGC tools |
-| "post to feed", "publish", "story" | Graph API |
-| "follower list", "who follows us" | UGC tools |
-| "competitor", "other account" | UGC tools |
-
-### Step 3: Extract Parameters
-
-- **Media IDs**: From previous queries or permalinks
-- **Shortcodes**: Extract from URLs (after /p/ or /reel/)
-- **Usernames**: Remove @ prefix if present
-- **Dates**: Convert to API format
-- **Limits**: Default to reasonable values (10-50)
-
 ## Publishing Workflow
 
 ### 1. Prepare Media
@@ -115,7 +104,7 @@ Supported formats:
 
 ### 2. Create Container
 
-Use `~~social-media` tools to create a media container specifying:
+Use `create-container` specifying:
 - Media type (IMAGE, VIDEO, REELS, CAROUSEL_ALBUM)
 - Media URL (publicly accessible)
 - Caption (optional)
@@ -123,11 +112,11 @@ Use `~~social-media` tools to create a media container specifying:
 
 ### 3. Check Status (for videos)
 
-Videos require processing time. Check container status and wait for FINISHED before publishing.
+Videos require processing time. Use `get-container-status` and wait for FINISHED before publishing.
 
 ### 4. Publish
 
-Use publish tools once container is in FINISHED status.
+Use `publish-container` once container is in FINISHED status.
 
 ## PostgreSQL Integration
 
@@ -151,37 +140,13 @@ ORDER BY (data->>'like_count')::int DESC
 LIMIT 10;
 ```
 
-## Rate Limits
+## For Complex Operations
 
-### Graph API
-- 200 calls per user per hour (standard)
-- Publishing: 25 posts per 24 hours
-- Insights: Cached for 1-2 hours
+```javascript
+import { apiRequest } from '../../../lib/http.js';
+const data = await apiRequest('instagram', '/me/media');
+```
 
-### UGC Tools
-- No official limits (private API)
-- Recommended: 1-2 second delays between requests
-- Risk of temporary blocks with aggressive use
-
-## Security Notes
-
-### Graph API
-- Never expose access tokens
-- Tokens expire; use long-lived tokens (60 days)
-- Refresh tokens before expiry
-
-### UGC Tools
-- Uses separate account to protect main business account
-- Risk of account suspension with aggressive use
-- Use delays between requests
-
-## Troubleshooting
-
-| Error | Solution |
-|-------|----------|
-| 401 Unauthorized | Token expired - check MCP configuration; verify permissions |
-| 400 Bad Request | Check media URL accessibility; verify params; wait for container FINISHED |
-| 429 Rate Limited | Wait and retry; reduce request frequency |
-| UGC login failed | Check MCP server credentials |
-| Profile not found | Account is private or deleted |
-| Session expired | Re-authenticate via MCP server |
+## Reference Files
+- [examples.md](references/examples.md) — Usage patterns and queries
+- [documentation.md](references/documentation.md) — Full API documentation

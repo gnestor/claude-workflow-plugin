@@ -1,9 +1,9 @@
 {
-  "name": "ecommerce",
+  "name": "workflow",
   "version": "1.0.0",
-  "description": "E-commerce operations assistant with Shopify, marketing, analytics, accounting, and productivity integrations. Query data, automate workflows, and manage your business.",
+  "description": "Workflow automation platform for Claude Code. Create, run, and manage repeatable workflows with e-commerce, marketing, analytics, and productivity integrations.",
   "author": {
     "name": "gnestor"
   },
-  "repository": "https://github.com/gnestor/claude-ecommerce-plugin"
+  "repository": "https://github.com/gnestor/claude-workflow-plugin"
 }

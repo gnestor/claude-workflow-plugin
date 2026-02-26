@@ -1,17 +1,19 @@
 ---
 name: shopify
 description: Primary source of truth for all Shopify data including orders, products, customers, and inventory. Activate when the user asks about Shopify data without needing to join with other data sources. Not for cross-source queries, website analytics, or non-Shopify data.
+category: ~~e-commerce
+service: Shopify
 ---
 
-# Shopify API Access
+# Shopify
 
 ## Purpose
 
-This skill enables direct interaction with the Shopify Admin GraphQL API using `~~e-commerce` tools. It translates natural language questions into GraphQL queries, executes them, and interprets the results. Provides access to all Shopify resources including orders, products, customers, inventory, and more.
+This skill enables direct interaction with the Shopify Admin GraphQL API using the `~~e-commerce` client script. It translates natural language questions into GraphQL queries, executes them, and interprets the results. Provides access to all Shopify resources including orders, products, customers, inventory, and more.
 
 **This is the PRIMARY SOURCE OF TRUTH for all Shopify data.**
 
-Authentication is handled by the MCP server configuration.
+Authentication is handled automatically by lib/auth.js.
 
 ## When to Use
 
@@ -29,56 +31,39 @@ Activate this skill when the user:
 - **Cross-data-source queries**: Use postgresql skill when joining Shopify data with other sources (e.g., "Show me orders with DM shipments", "Orders with Gorgias tickets")
 - **Website behavior analysis**: Use google-analytics skill for questions about traffic, page views, bounce rates, user sessions, etc.
 
-## Available Tools
+## Client Script
 
-The `~~e-commerce` MCP server provides tools for:
-- **Schema introspection** - Fetch and explore the Shopify GraphQL schema, list types, get type details
-- **Query execution** - Execute GraphQL queries with optional auto-pagination
-- **Mutation execution** - Create, update, and delete Shopify resources
-- **Schema caching** - Scan and cache the full GraphQL schema for faster lookups
+**Path:** `skills/shopify/scripts/client.js`
 
-## Natural Language to GraphQL Translation Process
+### Commands
 
-When a user asks a natural language question about Shopify data, follow this process:
+| Command | Description |
+|---------|-------------|
+| `query` | Execute a GraphQL query [--variables JSON] |
+| `mutation` | Execute a GraphQL mutation [--variables JSON] |
+| `introspect` | Fetch and cache GraphQL schema to `references/schemas/` |
 
-### Step 1: Understand the Question
+## Key API Concepts
 
-Extract key information:
-- **What resource**: What Shopify entity? (orders, products, customers, inventory, etc.)
-- **What filters**: Time ranges, conditions, specific values
-- **What aggregation**: Count, sum, average, group by
-- **What fields**: Specific properties to retrieve
+- **API**: Shopify Admin GraphQL API version 2025-01.
+- **Pagination**: Connection-based with `first`/`after` and `pageInfo { hasNextPage endCursor }`. Use `nodes` pattern (not `edges`). Max `first: 250`.
+- **Rate limits**: Bucket system with 1000 points, restoring at 50/second. Reduce query complexity or wait on throttle errors.
+- **Money fields**: Access through `MoneyBag` types (e.g., `totalPriceSet.shopMoney.amount`).
+- **Filtering**: Use `query: "field:value"` string syntax (see references/query-syntax.md).
 
-### Step 2: Identify GraphQL Type
+## Schema Cache
 
-Map natural language terms to Shopify GraphQL types:
-- Check cached schema in `references/schemas/` directory
-- Common mappings:
-  - "orders" -> `orders` query, returns `OrderConnection`
-  - "products" -> `products` query, returns `ProductConnection`
-  - "customers" -> `customers` query, returns `CustomerConnection`
-  - "inventory" -> `inventoryItems` or `inventoryLevels`
-  - "collections" -> `collections` query
+Run `introspect` to cache the full GraphQL schema at `references/schemas/introspection.json`. Check this file for available types, fields, and arguments before constructing queries.
 
-### Step 3: Get Type Schema
+## GraphQL Query Patterns
 
-For identified types, understand their structure:
-- Use schema introspection tools to see available fields
-- Note: Shopify uses connection types for pagination (edges/nodes pattern)
-- Look for common fields like `id`, `createdAt`, `updatedAt`, etc.
+### nodes vs edges -- Which to Use
 
-### Step 4: Construct GraphQL Query
+**`nodes` (Recommended)**: Use 90% of the time for cleaner queries.
 
-Build the GraphQL query using these patterns:
-
-**Edges vs Nodes - Which to Use?**
-
-GraphQL connections support two patterns for accessing items:
-
-1. **`nodes` (Recommended - Cleaner)**: Use this 90% of the time for simpler, more readable queries
 ```graphql
 {
-  orders(first: 10, query: "created_at:>=2024-01-01") {
+  orders(first: 250, query: "created_at:>=2024-01-01") {
     nodes {
       id
       name
@@ -98,15 +83,13 @@ GraphQL connections support two patterns for accessing items:
 }
 ```
 
-2. **`edges -> node` (Verbose)**: Only use when you need:
-   - Per-item cursors (not just page cursors)
-   - Edge-specific metadata
-   - Relay-specific patterns
+**`edges -> node` (Verbose)**: Only when you need per-item cursors or edge-specific metadata.
+
 ```graphql
 {
   orders(first: 10) {
     edges {
-      cursor  # Individual cursor for THIS specific item
+      cursor
       node {
         id
         name
@@ -114,54 +97,52 @@ GraphQL connections support two patterns for accessing items:
     }
     pageInfo {
       hasNextPage
-      endCursor  # Cursor for the end of the page
+      endCursor
     }
   }
 }
 ```
 
-**Recommendation**: Always use `nodes` unless you have a specific reason to use `edges`. The `pageInfo.endCursor` is sufficient for standard pagination.
+### Pagination
 
-**Common patterns:**
-- Use `first: 250` for forward pagination (250 is Shopify's max -- always use this unless you need fewer results)
-- Use `after: "cursor"` for pagination with `pageInfo.endCursor`
-- Use `query: "field:value"` for filtering (see `references/query-syntax.md` for filter syntax)
-- Use `sortKey: FIELD` for sorting
-- Access money values through `MoneyBag` types (e.g., `totalPriceSet.shopMoney.amount`)
-- Prefer `nodes` over `edges -> node` for cleaner queries
+Use `first: 250` (Shopify max) unless fewer results are needed. Paginate with `after`:
 
-### Step 5: Execute Query
+```graphql
+{
+  orders(first: 250, after: "eyJsYXN0X2lk...") {
+    nodes { id name }
+    pageInfo { hasNextPage endCursor }
+  }
+}
+```
 
-- Run the query using `~~e-commerce` query tools
-- If query fails with error, analyze the error message
-- Common fixes:
-  - Field doesn't exist -> Check schema with type introspection
-  - Invalid query syntax -> Review Shopify query language in `references/query-syntax.md`
-  - Rate limit exceeded -> Wait and retry
-  - Cursor expired -> Start from beginning
+Continue until `hasNextPage` is false.
 
-### Step 6: Handle Pagination
+### Common Query Mappings
 
-If results are paginated (hasNextPage = true):
-1. Extract the `endCursor` from pageInfo
-2. Make subsequent request with `after: endCursor`
-3. Combine results from all pages
-4. Continue until `hasNextPage` is false
+| Natural language | GraphQL query |
+|-----------------|---------------|
+| "orders" | `orders` -> `OrderConnection` |
+| "products" | `products` -> `ProductConnection` |
+| "customers" | `customers` -> `CustomerConnection` |
+| "inventory" | `inventoryItems` or `inventoryLevels` |
+| "collections" | `collections` -> `CollectionConnection` |
 
-Use auto-pagination when available to automatically fetch all pages.
+### Filtering with query syntax
 
-### Step 7: Interpret Results
+```graphql
+orders(first: 250, query: "created_at:>=2024-01-01 financial_status:paid")
+```
 
-Once query succeeds:
-1. Parse the nested response structure
-2. Extract relevant fields
-3. Perform any aggregations (count, sum, average)
-4. Answer the original natural language question
-5. Format results clearly (table, list, or summary)
+See references/query-syntax.md for full filter syntax.
+
+### Sorting
+
+```graphql
+orders(first: 250, sortKey: CREATED_AT, reverse: true)
+```
 
 ## GraphQL Mutations
-
-To create or update Shopify resources:
 
 ```graphql
 mutation {
@@ -181,55 +162,19 @@ mutation {
 }
 ```
 
-Always check `userErrors` field in mutation responses.
+Always check `userErrors` in mutation responses.
 
-## Rate Limits
+## For Complex Operations
 
-Shopify enforces rate limits based on a "bucket" system:
-- Most apps get 1000 points
-- Each query costs points based on complexity
-- Points restore at 50/second
-
-If rate limited:
-- Wait for bucket to refill
-- Reduce query complexity
-- Batch operations when possible
+```javascript
+import { apiRequest } from '../../../lib/http.js';
+const data = await apiRequest('shopify', '/graphql.json', {
+  method: 'POST',
+  body: JSON.stringify({ query: '{ shop { name } }' })
+});
+```
 
 ## Reference Files
-
-Detailed examples and documentation are available in the `references/` directory:
-
-- **[workflow-examples.md](references/workflow-examples.md)** - Detailed step-by-step workflow examples for common query patterns
-- **[query-syntax.md](references/query-syntax.md)** - Complete Shopify query language syntax reference
-- **[queries.md](references/queries.md)** - Collection of ready-to-use GraphQL query examples
-
-Consult these files when building queries or troubleshooting issues.
-
-## Security Notes
-
-- Never expose API tokens in output
-- Sanitize user input before constructing queries
-- Warn before executing mutations that modify data
-- Use read-only queries when possible
-- Be cautious with bulk operations
-
-## Troubleshooting
-
-**"Authentication failed"**
-- Verify the MCP server is properly configured
-- Check that the token has necessary permissions
-
-**"Field doesn't exist"**
-- Check schema with type introspection tools
-- Verify API version matches schema
-- Field might be on a related type (e.g., variants not products)
-
-**"Rate limit exceeded"**
-- Wait 20-30 seconds for bucket to refill
-- Simplify query to use fewer points
-- Paginate with smaller page sizes
-
-**"Query too complex"**
-- Reduce number of nested fields
-- Split into multiple smaller queries
-- Avoid requesting unnecessary fields
+- [queries.md](references/queries.md) -- Ready-to-use GraphQL query examples
+- [query-syntax.md](references/query-syntax.md) -- Complete Shopify query language syntax reference
+- [workflow-examples.md](references/workflow-examples.md) -- Step-by-step workflow examples

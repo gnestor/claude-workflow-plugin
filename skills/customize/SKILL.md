@@ -1,6 +1,6 @@
 ---
 name: customize
-description: "Customize and personalize the ecommerce plugin. Activate when: user says 'customize', 'personalize', 'configure', 'set up', 'set up plugin', 'connect my services', 'discover my data', 'scan my accounts', or wants to personalize the plugin, connect integrations, or populate workspace context."
+description: "Customize and personalize the workflow plugin. Activate when: user says 'customize', 'personalize', 'configure', 'set up', 'set up plugin', 'connect my services', 'discover my data', 'scan my accounts', or wants to personalize the plugin, connect integrations, or populate workspace context."
 ---
 
 # Plugin Customizer
@@ -17,17 +17,17 @@ Scan all `skills/*/SKILL.md` files for `~~category` references to build a list o
 grep -roh '~~[a-z-]*' skills/ | sort -u
 ```
 
-Cross-reference with `CONNECTORS.md` to get the full mapping of categories → available MCP servers → what each provides.
+Cross-reference with `CONNECTORS.md` to get the full mapping of categories → available client scripts → what each provides.
 
-Check which categories are already configured by reading `.mcp.json` and testing each connection with a lightweight read-only call.
+Check connected services with `node auth/setup.js --list`.
 
 Present the results:
 
 ```
 ## Plugin Requirements
 
-| Category | Status | Server |
-|----------|--------|--------|
+| Category | Status | Client Script |
+|----------|--------|---------------|
 | ~~e-commerce | Connected | Shopify |
 | ~~email-marketing | Connected | Klaviyo |
 | ~~customer-support | Not configured | — |
@@ -116,9 +116,9 @@ For each unconfigured category identified in step 1, walk the user through conne
 - PostgreSQL — provided by host (Supabase, Railway, Neon, etc.)
 
 For each integration:
-1. **OAuth services**: Walk through the OAuth flow step by step.
-2. **API key services**: Walk through credential acquisition. Add environment variables to `.mcp.json` `env` entries.
-3. **Database**: Ask for connection details and add to MCP server configuration.
+1. **OAuth services**: Run `node auth/setup.js {service}` to start OAuth flow.
+2. **API key services**: Run `node auth/setup.js {service}` and follow prompts.
+3. **Database**: Run `node auth/setup.js postgresql` and provide connection string.
 
 ### 4. Verify & Discover
 
@@ -126,19 +126,28 @@ For each configured integration, run a verification test AND extract business co
 
 | Category | Verification test | Context to discover |
 |----------|------------------|-------------------|
-| `~~e-commerce` | Fetch shop info | Store name, URL, currency, product count, top products |
-| `~~email-marketing` | List campaigns | List/segment count, recent campaign performance |
-| `~~customer-support` | Fetch recent tickets | Ticket volume, common tags, team members |
-| `~~accounting` | List recent invoices | Business legal name, currency, fiscal year |
-| `~~paid-social` | List ad accounts | Ad account name, spend overview |
-| `~~search-ads` | List accounts | Account name, active campaigns |
-| `~~analytics` | List properties | Website URL, property ID, monthly sessions |
-| `~~seo` | List sites | Verified sites, top queries |
-| `~~knowledge-base` | Search pages | Workspace structure, databases, team wikis |
-| `~~database` | `SELECT 1` | Available tables, schema overview |
-| `~~social-media` | Fetch profile | Username, follower count, content themes |
-| `~~dam` | List workspaces | Asset library structure |
-| `~~workspace` | List recent emails | User email, organization domain |
+| `~~e-commerce` | `node skills/shopify/scripts/client.js test-auth` | Store name, URL, currency, product count, top products |
+| `~~email-marketing` | `node skills/klaviyo/scripts/client.js test-auth` | List/segment count, recent campaign performance |
+| `~~customer-support` | `node skills/gorgias/scripts/client.js test-auth` | Ticket volume, common tags, team members |
+| `~~accounting` | `node skills/quickbooks/scripts/client.js test-auth` | Business legal name, currency, fiscal year |
+| `~~paid-social` | `node skills/meta-ads/scripts/client.js test-auth` | Ad account name, spend overview |
+| `~~search-ads` | `node skills/google-ads/scripts/client.js test-auth` | Account name, active campaigns |
+| `~~analytics` | `node skills/google-analytics/scripts/client.js test-auth` | Website URL, property ID, monthly sessions |
+| `~~seo` | `node skills/google-search-console/scripts/client.js test-auth` | Verified sites, top queries |
+| `~~knowledge-base` | `node skills/notion/scripts/client.js test-auth` | Workspace structure, databases, team wikis |
+| `~~database` | `node skills/postgresql/scripts/client.js test-auth` | Available tables, schema overview |
+| `~~social-media` | `node skills/instagram/scripts/client.js test-auth` | Username, follower count, content themes |
+| `~~dam` | `node skills/air/scripts/client.js test-auth` | Asset library structure |
+| `~~workspace` | `node skills/google-workspace/scripts/client.js test-auth` | User email, organization domain |
+
+**Schema caching:** After successful auth for data services, cache schemas for offline query building:
+
+| Service | Scan command |
+|---------|-------------|
+| PostgreSQL | `node skills/postgresql/scripts/client.js scan-all` |
+| BigQuery | `node skills/google-bigquery/scripts/client.js scan-all-schemas` |
+| Notion | `node skills/notion/scripts/client.js scan-databases` |
+| Shopify | `node skills/shopify/scripts/client.js introspect` |
 
 For each successful connection, merge discovered data into workspace context files:
 

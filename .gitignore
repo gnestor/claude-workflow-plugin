@@ -1,4 +1,4 @@
-# Credentials
+# Credentials (stored at ~/.config/workflow-plugin/, not in repo)
 .env
 
 # User-specific content (populated during setup)
@@ -6,13 +6,11 @@
 # skills/brand-voice/SKILL.md
 
 # Cached schemas (user-populated)
-skills/notion/references/schemas/*.json
-skills/postgresql/references/schemas/*.json
-skills/google-bigquery/references/schemas/*.json
+skills/*/references/schemas/*.json
 
-# Node modules (for local MCP servers)
+# Node modules
 node_modules/
-servers/*/node_modules/
+lib/node_modules/
 
 # OS files
 .DS_Store

@@ -55,7 +55,7 @@ Present a summary to the user:
 
 - .claude/docs/COMPANY.md — Business context
 - skills/brand-voice/SKILL.md — Brand guidelines
-- .mcp.json — Integration credentials
+- ~/.config/workflow-plugin/ — Encrypted credentials (never in repo)
 ```
 
 Ask the user to confirm before proceeding. They can include or exclude specific files.
@@ -86,7 +86,7 @@ gh pr create --repo [upstream] --title "[description]" --body "$(cat <<'EOF'
 [List of files modified with brief descriptions]
 
 ---
-Contributed via the ecommerce plugin's self-learning system.
+Contributed via the workflow plugin's self-learning system.
 EOF
 )"
 ```

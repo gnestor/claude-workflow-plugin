@@ -1,15 +1,17 @@
 ---
 name: notion
 description: This skill should be used to access and interact with Notion workspace functionality including searching pages, databases, retrieving content, creating pages, and adding comments. Activate when the user mentions Notion, asks to search Notion, create Notion pages, query databases, or reference Notion content. Supports Markdown formatting for all content. Can scan and cache database schemas for improved query translation.
+category: ~~knowledge-base
+service: notion
 ---
 
-# Notion Workspace Access
+# Notion
 
 ## Purpose
 
-This skill enables direct interaction with Notion workspace using `~~knowledge-base` tools. It provides search, retrieval, creation, and query capabilities for pages and databases.
+This skill enables direct interaction with the Notion workspace via a client script. It provides search, retrieval, creation, and query capabilities for pages and databases.
 
-Authentication is handled by the MCP server configuration.
+Authentication is handled automatically by `lib/auth.js`.
 
 ## When to Use
 
@@ -28,14 +30,27 @@ Activate this skill when the user:
 - **Cross-source queries**: Use postgresql skill when joining Notion data with other sources
 - **Website analytics**: Use google-analytics skill for traffic and behavior data
 
-## Available Tools
+## Client Script
 
-The `~~knowledge-base` MCP server provides tools for:
-- **Search** - Search workspace for pages and databases by title or content
-- **Pages** - Get page content, create pages (as child or in database), update pages, convert to/from Markdown
-- **Databases** - List databases, get database schema, query databases with filters, scan and cache schemas
-- **Comments** - Add comments to pages
-- **Markdown conversion** - Convert between Markdown and Notion block format
+**Path:** `skills/notion/scripts/client.js`
+
+### Commands
+
+| Command | Description |
+|---------|-------------|
+| `test-auth` | Verify authentication is working |
+| `search [--query, --type, --limit]` | Search workspace for pages and databases |
+| `get-page --id` | Get page content by ID |
+| `create-page --parent-id [--parent-type, --title, --body JSON]` | Create a new page |
+| `update-page --page-id --body JSON` | Update an existing page |
+| `query-database --database-id [--filter JSON, --sorts JSON, --limit, --cursor]` | Query a database with filters and sorts |
+| `get-database --id` | Get database schema and metadata |
+| `create-database --parent-id --title [--body JSON]` | Create a new database |
+| `scan-databases` | Scan all databases, save schemas to `references/schemas/` |
+
+## Key API Concepts
+
+Notion API v1 (`api.notion.com/v1`). Everything is a page, database, or block. Databases have typed properties (select, multi_select, status, people, relation, etc.) with structured filter/sort syntax. All content supports Markdown conversion.
 
 ## Markdown Support
 
@@ -87,13 +102,12 @@ Supported Obsidian types: `info`, `note`, `tip`, `warning`, `danger`, `error`, `
 When a user requests Notion-related operations:
 
 1. **Identify the operation type**:
-   - Search -> use search tools
-   - Retrieve content -> use get-page tools
-   - Query data -> use query-database tools
-   - Create content -> use create-page tools
-   - Add feedback -> use add-comment tools
-   - List databases -> use list-databases tools
-   - Get database schema -> use get-database-schema tools
+   - Search -> use `search` command
+   - Retrieve content -> use `get-page` command
+   - Query data -> use `query-database` command
+   - Create content -> use `create-page` command
+   - List databases -> use `search --type database`
+   - Get database schema -> use `get-database` command
 
 2. **Look up database IDs and schemas from references**:
    - **ALWAYS check `references/schemas/` FIRST** to find databases by name
@@ -122,19 +136,13 @@ When a user requests Notion-related operations:
    - For query-database: use database ID from schema file, build filter using schema properties
    - For create-page in database: use database ID, extract title and content (content can be Markdown)
    - For create-page as child: use parent page ID
-   - For add-comment: extract page ID and comment text
 
-6. **Execute using `~~knowledge-base` tools**
+6. **Execute using client script commands**
 
 7. **Process the response**:
    - Format results in a user-friendly way
    - For page content, convert blocks to markdown
    - For database queries, format as tables
-
-8. **Handle errors gracefully**:
-   - If authentication fails, check MCP server configuration
-   - If page not found, suggest searching first
-   - If no access, remind user to share pages with integration
 
 ## Notion Workspace Organization
 
@@ -165,25 +173,13 @@ When a user requests Notion-related operations:
 - [People](https://www.notion.so/your-workspace/1f9c88f3fa6e4b1290f1da26ffc5454f?v=84f849b25d5b462a964c22e64c4bef6d): People I have met
 - [Links](https://www.notion.so/your-workspace/1758a48debe44da6a6003ad0c1bffe47?v=06aa532a044f4f6bbceef37dcfaef6ac): Personal links
 
-## Security Notes
+## For Complex Operations
 
-- Never expose API tokens in output
-- Respect Notion integration permissions (read-only if configured)
-- Warn user before creating or modifying content
-- The Notion API has rate limits - batch operations when possible
+```javascript
+import { apiRequest } from '../../../lib/http.js';
+const data = await apiRequest('notion', '/v1/pages');
+```
 
-## Troubleshooting
-
-**"Authentication failed"**
-- Verify MCP server configuration
-- Check token validity at https://www.notion.so/profile/integrations
-
-**"Page not found"**
-- Page may not be shared with integration
-- Use "Connect to integration" in Notion page settings
-- Try searching first to confirm page exists
-
-**"Permission denied"**
-- Integration may be read-only
-- Check integration capabilities at https://www.notion.so/profile/integrations
-- User may need to grant additional permissions
+## Reference Files
+- [examples.md](references/examples.md) — Usage patterns and queries
+- [documentation.md](references/documentation.md) — Full API documentation

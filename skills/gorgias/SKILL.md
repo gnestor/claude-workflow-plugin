@@ -1,17 +1,19 @@
 ---
 name: gorgias
 description: Real-time customer support data from Gorgias including tickets, messages, customers, and satisfaction surveys. Use for real-time ticket operations, text search, and write operations. Not for historical trend analysis, aggregate metrics, or cross-source queries.
+category: ~~customer-support
+service: Gorgias
 ---
 
-# Gorgias API Integration
+# Gorgias
 
 ## Purpose
 
-This skill enables direct interaction with the Gorgias API for customer support operations using `~~customer-support` tools. It translates natural language questions into API calls, executes them, and interprets the results. Provides real-time access to tickets, messages, customers, satisfaction surveys, tags, users, and macros.
+This skill enables direct interaction with the Gorgias API for customer support operations using the `~~customer-support` client script. It translates natural language questions into API calls, executes them, and interprets the results. Provides real-time access to tickets, messages, customers, satisfaction surveys, tags, users, and macros.
 
 **Use this skill for REAL-TIME customer support operations and WRITE operations.**
 
-Authentication is handled by the MCP server configuration.
+Authentication is handled automatically by lib/auth.js.
 
 ## When to Use
 
@@ -34,76 +36,52 @@ Activate this skill when the user:
 - **Agent performance reports**: Use postgresql for aggregate agent statistics
 - **Data older than 1 hour**: PostgreSQL tables sync hourly and may be more efficient
 
-## Available Tools
+## Client Script
 
-The `~~customer-support` MCP server provides tools for:
-- **Authentication** - Test auth, get account info
-- **Tickets** - List, get, search, create, update tickets; add messages/replies
-- **Messages** - List messages for ticket, get message details
-- **Customers** - List, get, search customers; get customer tickets; update customer; merge customers
-- **Satisfaction Surveys** - List and get surveys
-- **Tags** - List, create, delete tags; add/remove tags from tickets
-- **Users & Teams** - List users, get user details, list teams
-- **Views & Macros** - List views, list macros, get macro details
-- **Integrations** - List connected integrations
+**Path:** `skills/gorgias/scripts/client.js`
 
-## Natural Language to API Translation
+### Commands
 
-When a user asks a natural language question about Gorgias data, follow this process:
+| Command | Description |
+|---------|-------------|
+| `test-auth` | Test authentication |
+| `get-account` | Get account info |
+| `list-tickets` | List tickets [--status, --limit, --cursor, --assignee-id, --channel] |
+| `get-ticket` | Get ticket with messages (--id) |
+| `search-tickets` | Search tickets client-side (--query) [--limit] |
+| `create-ticket` | Create ticket (--subject) [--customer-email, --channel, --body, --json] |
+| `update-ticket` | Update ticket (--id) [--status, --assignee-id, --priority, --json] |
+| `add-message` | Add message to ticket (--ticket-id, --body) [--channel, --from-agent, --sender-email, --json] |
+| `list-messages` | List messages for ticket (--ticket-id) |
+| `get-message` | Get message by id (--id) |
+| `list-customers` | List customers [--email, --limit, --cursor] |
+| `get-customer` | Get customer by id (--id) |
+| `search-customers` | Search customers by email (--email) |
+| `update-customer` | Update customer (--id) [--name, --email, --json] |
+| `merge-customers` | Merge customers (--target-id, --source-id) |
+| `get-customer-tickets` | Get tickets for customer (--customer-id) [--limit] |
+| `list-surveys` | List satisfaction surveys [--limit, --cursor, --ticket-id, --score] |
+| `get-survey` | Get satisfaction survey by id (--id) |
+| `list-tags` | List tags |
+| `create-tag` | Create a tag |
+| `delete-tag` | Delete a tag |
+| `add-tag` | Add tag to ticket |
+| `remove-tag` | Remove tag from ticket |
+| `list-users` | List users |
+| `get-user` | Get user details |
+| `list-teams` | List teams |
+| `list-views` | List views |
+| `list-macros` | List macros |
+| `get-macro` | Get macro details |
+| `list-integrations` | List connected integrations |
 
-### Step 1: Understand the Question
+## Key API Concepts
 
-Extract key information:
-- **What resource**: tickets, messages, customers, surveys, tags?
-- **What operation**: read, search, create, update?
-- **What filters**: status, channel, date range, customer?
-- **Real-time needed?**: If historical analysis, consider postgresql skill
-
-### Step 2: Identify the Resource
-
-Map natural language to Gorgias resources:
-- "tickets", "support requests", "cases" -> tickets
-- "messages", "replies", "conversations" -> messages
-- "customers", "users", "contacts" -> customers
-- "satisfaction", "CSAT", "feedback" -> satisfaction-surveys
-- "tags", "labels" -> tags
-- "agents", "team members" -> users
-
-### Step 3: Determine the Operation
-
-| User Says | Operation |
-|-----------|-----------|
-| "show", "list", "get", "find" | Read (list/get) |
-| "search", "look for" | Search |
-| "reply", "respond", "add note" | Add message |
-| "close", "update", "change" | Update |
-| "create", "new" | Create |
-| "tag", "label" | Add tag |
-| "assign" | Update assignee |
-
-### Step 4: Extract Parameters
-
-- Date ranges from "last week", "this month", "since January"
-- Status from "open", "closed", "unresolved"
-- Channel from "email", "chat", "Instagram", "phone"
-- Customer from email addresses or order references
-
-### Step 5: Execute Request
-
-Run the appropriate `~~customer-support` tools with extracted parameters.
-
-### Step 6: Handle Pagination
-
-If results are paginated (meta.next_cursor present):
-1. Collect initial results
-2. If more needed, use cursor for next page
-3. Combine results from all pages
-
-### Step 7: Interpret Results
-
-- Parse the response data
-- Format for user readability
-- Provide counts, summaries, or highlights as appropriate
+- **Base URL**: `https://{domain}.gorgias.com/api`
+- **Pagination**: Cursor-based. When `meta.next_cursor` is present, pass it as `--cursor` on subsequent calls.
+- **Rate limits**: 60 requests/minute. Wait and retry on 429 errors.
+- **IDs**: Numeric integers.
+- **Domain**: Just the subdomain (e.g., `your-domain` not `your-domain.gorgias.com`).
 
 ## Shopify Integration
 
@@ -114,50 +92,13 @@ Gorgias tickets can be linked to Shopify orders. To find tickets for a Shopify o
 
 For complex Shopify+Gorgias queries (e.g., "tickets for orders over $200"), use the postgresql skill which can join the data sources.
 
+## For Complex Operations
+
+```javascript
+import { apiRequest } from '../../../lib/http.js';
+const data = await apiRequest('gorgias', '/tickets?status=open');
+```
+
 ## Reference Files
-
-- **[queries.md](references/queries.md)** - Common query patterns
-- **[workflow-examples.md](references/workflow-examples.md)** - Step-by-step workflow examples
-
-## Rate Limits
-
-Gorgias API has rate limits (typically 60 requests/minute). If you encounter rate limit errors:
-1. Wait a few seconds before retrying
-2. Reduce query frequency
-3. Use pagination with smaller page sizes
-
-## Security Notes
-
-- Never expose API tokens or email addresses in logs or responses
-- Store credentials securely via MCP server configuration
-- Warn before sending messages to customers (write operations)
-
-## Troubleshooting
-
-### Authentication Errors
-```
-Error: Gorgias API error (401): Unauthorized
-```
-- Verify MCP server configuration
-- Check that the API key has not been revoked
-
-### Not Found Errors
-```
-Error: Gorgias API error (404): Not found
-```
-- Verify the ticket/customer/tag ID exists
-- IDs are numeric integers
-
-### Rate Limit Errors
-```
-Error: Gorgias API error (429): Too many requests
-```
-- Wait a few seconds and retry
-- Reduce the frequency of API calls
-
-### Domain Errors
-```
-Error: Missing GORGIAS_DOMAIN
-```
-- Check MCP server configuration
-- Domain should be just the subdomain (e.g., "your-domain" not "your-domain.gorgias.com")
+- [queries.md](references/queries.md) -- Common query patterns
+- [workflow-examples.md](references/workflow-examples.md) -- Step-by-step workflow examples

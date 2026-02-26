@@ -1,17 +1,19 @@
 ---
 name: pinterest
 description: Pinterest content management including boards, pins, media uploads, and analytics. Activate when the user asks about Pinterest boards, creating or uploading pins, querying Pinterest analytics, or managing Pinterest content. Use for bulk uploading images with SEO-optimized metadata (title, description, alt text).
+category: ~~social-media
+service: pinterest
 ---
 
-# Pinterest API Integration
+# Pinterest
 
 ## Purpose
 
-This skill enables direct interaction with the Pinterest API v5 using `~~social-media` tools. It translates natural language questions into API calls, executes them, and interprets the results. Provides access to boards, pins, board sections, user account data, and analytics.
+This skill enables direct interaction with the Pinterest API v5 via a client script. It translates natural language questions into API calls, executes them, and interprets the results. Provides access to boards, pins, board sections, user account data, and analytics.
 
 **Use this skill for Pinterest content management and analytics.**
 
-Authentication is handled by the MCP server configuration.
+Authentication is handled automatically by `lib/auth.js`.
 
 ## When to Use
 
@@ -32,55 +34,46 @@ Activate this skill when the user:
 - **Cross-platform analytics**: Use dedicated analytics tools
 - **Cross-source queries**: Use postgresql skill when joining Pinterest data with Shopify, Gorgias, or other sources
 
-## Available Tools
+## Client Script
 
-The `~~social-media` MCP server provides tools for:
-- **Account** - Get account info, analytics, top pins, followers/following
-- **Boards** - List, get, create, update, delete boards; list board pins; search boards; get board summary
-- **Board Sections** - List, create, update, delete sections; list section pins
-- **Pins** - List, get, create, update, delete pins; get pin analytics; save pin to board
-- **Media** - Upload images, create pins with various media sources (URL, base64, video)
+**Path:** `skills/pinterest/scripts/client.js`
 
-## Natural Language to API Translation
+### Commands
 
-### Step 1: Identify the Resource Type
+| Command | Description |
+|---------|-------------|
+| `test-auth` | Verify authentication is working |
+| `get-profile` | Get account profile information |
+| `get-analytics --start-date --end-date` | Get account-level analytics for a date range |
+| `top-pins --start-date --end-date` | Get top performing pins for a date range |
+| `list-followers` | List account followers |
+| `list-following` | List accounts being followed |
+| `list-boards [--limit, --bookmark]` | List all boards with optional pagination |
+| `get-board --board-id` | Get details for a specific board |
+| `create-board --name [--description, --privacy]` | Create a new board |
+| `update-board --board-id` | Update board details |
+| `delete-board --board-id` | Delete a board |
+| `list-board-pins --board-id` | List all pins on a board |
+| `list-sections --board-id` | List sections within a board |
+| `create-section --board-id --name` | Create a new board section |
+| `update-section --section-id --name` | Rename a board section |
+| `delete-section --section-id` | Delete a board section |
+| `list-section-pins --section-id` | List pins within a section |
+| `list-pins [--limit, --bookmark]` | List all pins with optional pagination |
+| `get-pin --pin-id` | Get details for a specific pin |
+| `create-pin --board-id --title --media-url [--description, --alt-text, --link, --section-id]` | Create a new pin |
+| `update-pin --pin-id [--title, --description, --alt-text, --link]` | Update pin metadata |
+| `delete-pin --pin-id` | Delete a pin |
+| `get-pin-analytics --pin-id --start-date --end-date` | Get analytics for a specific pin |
+| `save-pin --pin-id --board-id [--section-id]` | Save an existing pin to a board |
 
-Map natural language terms:
-- "boards", "collections" -> boards operations
-- "pins", "images", "photos", "posts" -> pins operations
-- "sections", "folders" -> board sections
-- "analytics", "performance", "stats" -> analytics endpoints
-- "followers", "following" -> user account
+## Key API Concepts
 
-### Step 2: Determine the Operation
-
-| User Intent | Operation |
-|------------|---------|
-| "Show me my boards" | list-boards |
-| "What pins are on X board?" | list-board-pins |
-| "Create a new board called X" | create-board |
-| "Upload this image to X board" | create-pin |
-| "How is my pin performing?" | pin-analytics |
-| "Delete the pin" | delete-pin |
-| "Add a section to board" | create-section |
-| "Search for my X board" | search-boards |
-
-### Step 3: Extract Parameters
-
-**Board identification:**
-- By name: First search-boards, get ID
-- By ID: Use directly
-
-**Date ranges:**
-- "last week" -> 7 days ago to today
-- "this month" -> first of month to today
-- "January 2025" -> 2025-01-01 to 2025-01-31
+Pinterest API v5 (`api.pinterest.com/v5`). Uses bookmark-based pagination for list endpoints. Rate limit is ~1000 requests per minute; add 100-200ms delay between bulk operations. Board privacy options: `PUBLIC`, `PROTECTED`, `SECRET`.
 
 ## Bulk Upload Workflow
 
 For bulk uploading images with SEO-optimized metadata:
-
-### Process
 
 1. **User provides images**: Folder path or list of image URLs
 2. **Claude analyzes each image** and generates:
@@ -89,7 +82,7 @@ For bulk uploading images with SEO-optimized metadata:
    - **Alt text**: Descriptive for accessibility
    - **Link**: Product/page URL (if applicable)
 3. **User reviews and approves** the generated metadata
-4. **Upload pins** using create-pin tools for each image
+4. **Upload pins** using create-pin for each image
 5. **Report results**: Success/failure summary
 
 ### Pin Creation Data Structure
@@ -119,46 +112,13 @@ For bulk uploading images with SEO-optimized metadata:
 
 **Privacy options for boards:** `PUBLIC`, `PROTECTED`, `SECRET`
 
-## Rate Limits
+## For Complex Operations
 
-Pinterest API has rate limits:
-- Standard endpoints: ~1000 requests per minute
-- Analytics endpoints: May have lower limits
-- Bulk operations: Add 100-200ms delay between requests
+```javascript
+import { apiRequest } from '../../../lib/http.js';
+const data = await apiRequest('pinterest', '/v5/boards');
+```
 
-If rate limited:
-- Wait 1 minute before retrying
-- Reduce request frequency
-- Use pagination for large datasets
-
-## Security Notes
-
-- Never expose client secrets or refresh tokens in output
-- Refresh tokens may rotate - tokens are managed by MCP server
-- Always use HTTPS for image URLs
-- Be cautious with delete operations - they cannot be undone
-
-## Troubleshooting
-
-**"Authentication failed"**
-- Verify MCP server configuration
-- Re-authenticate if tokens have expired
-
-**"Board not found"**
-- Use list-boards to see available boards
-- Check board ID format (numeric string)
-- Board may be private or deleted
-
-**"Pin creation failed"**
-- Verify board_id is correct
-- Check image URL is accessible
-- Ensure media_source format is correct
-- Title must be under 100 characters
-
-**"Rate limit exceeded"**
-- Wait 1 minute before retrying
-- Add delays between bulk operations
-- Reduce request frequency
-
-**"Invalid scope"**
-- Check MCP server configuration for required permissions
+## Reference Files
+- [examples.md](references/examples.md) — Usage patterns and queries
+- [documentation.md](references/documentation.md) — Full API documentation

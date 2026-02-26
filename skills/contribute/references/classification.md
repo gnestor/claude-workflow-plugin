@@ -13,13 +13,16 @@ Rules for separating generic (shareable) plugin improvements from company-specif
 | `hooks/*.sh` | Generic | Hook script improvements |
 | `commands/setup.md` | Generic | Onboarding improvements |
 | `CONNECTORS.md` | Generic | New connector options |
-| `servers/*/index.js` | Generic | MCP server bug fixes and features |
-| `servers/*/package.json` | Generic | Dependency updates |
+| `skills/*/scripts/client.js` | Generic | Client script bug fixes and features |
+| `lib/*.js` | Generic | Shared library improvements |
+| `lib/services.json` | Generic | Service registry updates |
+| `auth/setup.js` | Generic | Auth setup improvements |
 | `README.md` | Mixed | See below |
 | `.claude-plugin/plugin.json` | Generic | Plugin metadata |
-| `.mcp.json` | Company-specific | Contains user's server URLs and credentials |
 | `.claude/docs/*` | Company-specific | User's business context |
 | `.claude/rules/*` | Company-specific | User's preferences |
+| `workflows/*` | Company-specific | User's personal automations and outputs |
+| `.claude/docs/WORKFLOWS.md` | Company-specific | User's workflow registry |
 | `.gitignore` | Generic | Build/ignore rules |
 
 ## Mixed Files

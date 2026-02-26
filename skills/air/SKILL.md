@@ -1,17 +1,19 @@
 ---
 name: air
 description: Digital asset management (DAM) for Air.inc including assets, boards, tags, custom fields, and media uploads. Activate when the user asks about Air media library, uploading photos/videos, organizing assets into boards, or managing media metadata. Supports deduplication, bulk uploads, and vision-based content analysis.
+category: ~~dam
+service: Air.inc
 ---
 
-# Air API Integration
+# Air.inc
 
 ## Purpose
 
-This skill enables direct interaction with the Air.inc API for digital asset management (DAM) using `~~dam` tools. It translates natural language questions into API calls, executes them, and interprets the results. Provides access to assets, boards, tags, custom fields, uploads, and deduplication features.
+This skill enables direct interaction with the Air.inc API for digital asset management (DAM) using the `~~dam` client script. It translates natural language questions into API calls, executes them, and interprets the results. Provides access to assets, boards, tags, custom fields, uploads, and deduplication features.
 
 **Use this skill for DIGITAL ASSET MANAGEMENT in Air.inc.**
 
-Authentication is handled by the MCP server configuration.
+Authentication is handled automatically by lib/auth.js.
 
 ## When to Use
 
@@ -33,76 +35,91 @@ Activate this skill when the user:
 - **Shopify product images**: Use shopify skill for product media
 - **General file storage**: Use appropriate cloud storage skills
 
-## Available Tools
+## Client Script
 
-The `~~dam` MCP server provides tools for:
-- **Assets** - List, get, delete, download assets; get asset versions; manage tags and custom fields on assets; get asset's boards
-- **Boards** - List, get, create, update, delete boards; list board assets; add/remove assets from boards; manage board guests
-- **Custom Fields** - List, create, update, delete custom fields; add options to select fields
-- **Tags** - List, create, update, delete tags
-- **Uploads** - Upload files, import from URL, check import status
-- **Deduplication** - Find duplicates by filename or hash; check if file exists before upload
-- **Vision Analysis** - Download assets for vision-based content analysis
-- **Roles** - List available roles for guest management
+**Path:** `skills/air/scripts/client.js`
 
-## Natural Language to API Translation
+### Commands
 
-### Step 1: Identify the Resource Type
+| Command | Description |
+|---------|-------------|
+| `test-auth` | Test authentication |
+| `list-assets` | List assets |
+| `get-asset` | Get asset details |
+| `delete-asset` | Delete an asset |
+| `download-asset` | Download an asset |
+| `get-asset-versions` | Get all versions of an asset |
+| `get-asset-version` | Get a specific asset version |
+| `add-asset-tag` | Add tag to an asset |
+| `remove-asset-tag` | Remove tag from an asset |
+| `set-custom-field` | Set custom field value on an asset |
+| `get-asset-boards` | Get boards an asset belongs to |
+| `list-boards` | List boards |
+| `get-board` | Get board details |
+| `create-board` | Create a board |
+| `update-board` | Update a board |
+| `delete-board` | Delete a board |
+| `list-board-assets` | List assets in a board |
+| `add-to-board` | Add assets to a board |
+| `remove-from-board` | Remove asset from a board |
+| `list-board-guests` | List board guests |
+| `add-board-guest` | Add guest to a board |
+| `update-board-guest` | Update board guest role |
+| `remove-board-guest` | Remove guest from a board |
+| `list-custom-fields` | List custom fields |
+| `get-custom-field` | Get custom field details |
+| `create-custom-field` | Create a custom field |
+| `update-custom-field` | Update a custom field |
+| `delete-custom-field` | Delete a custom field |
+| `add-custom-field-option` | Add option to a select custom field |
+| `update-custom-field-option` | Update a custom field option |
+| `delete-custom-field-option` | Delete a custom field option |
+| `list-tags` | List tags |
+| `create-tag` | Create a tag |
+| `update-tag` | Update a tag |
+| `delete-tag` | Delete a tag |
+| `upload-file` | Upload a file |
+| `import-url` | Import asset from URL |
+| `get-import-status` | Check import status |
+| `list-roles` | List available roles |
+| `find-duplicates-by-name` | Find duplicate assets by filename |
+| `find-duplicates-by-hash` | Find duplicate assets by file hash |
+| `check-duplicate` | Check if a file already exists before upload |
 
-| User Says | Resource |
-|-----------|----------|
-| "assets", "media", "files", "images", "photos", "videos" | Assets |
-| "boards", "folders", "collections" | Boards |
-| "tags", "labels" | Tags |
-| "custom fields", "metadata", "properties" | Custom Fields |
-| "duplicates", "copies", "repeated" | Deduplication |
+## Key API Concepts
 
-### Step 2: Identify the Operation
-
-| User Says | Operation |
-|-----------|-----------|
-| "show", "list", "get", "find", "search" | Read (list/get) |
-| "create", "add", "new", "upload" | Create/Upload |
-| "update", "change", "edit", "rename" | Update |
-| "delete", "remove", "trash" | Delete |
-| "organize", "tag", "categorize" | Metadata operations |
-| "share", "invite", "add guest" | Guest management |
-| "download", "export" | Download |
-| "analyze", "identify", "what's in" | Vision analysis |
-
-### Step 3: Extract Parameters
-
-- Asset/Board IDs from context or previous queries
-- Search terms from quoted text
-- File paths for uploads
-- JSON data for complex operations
+- **Base URL**: `https://api.air.inc/shorturl/v1`
+- **Workspace ID**: Required for all requests; configured in auth.
+- **Pagination**: Cursor-based. Check response for next page indicators.
+- **Rate limits**: Back off and retry on 429 errors.
+- **Asset IDs**: Case-sensitive strings.
 
 ## Upload Workflow
 
 ### Small Files (< 5GB)
-1. Use the upload tools directly
+1. Use `upload-file` directly
 2. File is uploaded via FormData
 
 ### URL Imports
-1. Call import-url with the source URL
-2. Check status with get-import-status
+1. Call `import-url` with the source URL
+2. Check status with `get-import-status`
 3. Wait for status to be `succeeded`
 
 ## Deduplication Workflow
 
 ### Before Uploading
-1. Check if file already exists using check-duplicate tools
+1. Check if file already exists using `check-duplicate`
 2. If no duplicates, proceed with upload
 
 ### Finding Existing Duplicates
-- **Find by name** (fast) - Groups assets with matching filenames
-- **Find by hash** (more accurate) - Groups assets with matching file hashes
+- **Find by name** (fast) -- Groups assets with matching filenames
+- **Find by hash** (more accurate) -- Groups assets with matching file hashes
 
 ### Removing Duplicates
-1. Find duplicates using tools above
+1. Find duplicates using the commands above
 2. Review the duplicate groups
 3. Decide which to keep (usually the oldest or most organized)
-4. Delete the others using delete-asset tools
+4. Delete the others using `delete-asset`
 
 ## Bulk Upload Workflow
 
@@ -117,8 +134,8 @@ For bulk uploading multiple files:
 ## Vision Integration Workflow
 
 ### Analyzing Asset Content
-1. Download asset for analysis using vision tools
-2. The tool returns a temp file path
+1. Download asset for analysis using `download-asset`
+2. The command returns a temp file path
 3. Use Claude's Read tool to view and analyze the image
 
 ### Common Vision Use Cases
@@ -128,52 +145,12 @@ For bulk uploading multiple files:
 - **Quality assessment**: "Is this image suitable for marketing use?"
 - **Text extraction**: "What text appears in this image?"
 
-## Rate Limits
+## For Complex Operations
 
-The Air API has rate limits. If you encounter rate limit errors:
-1. Wait a few seconds before retrying
-2. Reduce the frequency of API calls
-3. Use pagination to fetch data in smaller batches
+```javascript
+import { apiRequest } from '../../../lib/http.js';
+const data = await apiRequest('air', '/assets');
+```
 
-## Security Notes
-
-- Never expose API keys or workspace IDs in logs or responses
-- Credentials are managed by MCP server configuration
-
-## Troubleshooting
-
-### Authentication Errors
-```
-Error: Air API error (401): Unauthorized
-```
-- Verify MCP server configuration
-- Check that the API key has not been revoked
-
-### Not Found Errors
-```
-Error: Air API error (404): Not found
-```
-- Verify the asset/board/tag ID exists
-- Check that you have access to the resource
-- IDs are case-sensitive
-
-### Rate Limit Errors
-```
-Error: Air API error (429): Too many requests
-```
-- Wait a few seconds and retry
-- Reduce the frequency of API calls
-
-### Upload Errors
-```
-Error: Upload failed (413): Payload too large
-```
-- File exceeds size limit
-- For large files, consider using the Air web interface
-
-### Permission Errors
-```
-Error: Air API error (403): Forbidden
-```
-- API key may not have the required permissions
-- Check MCP server configuration for API permissions
+## Reference Files
+- No reference files yet. Add examples.md and documentation.md to references/ as needed.

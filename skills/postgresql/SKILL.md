@@ -1,15 +1,17 @@
 ---
 name: postgresql
 description: Data warehouse for cross-source queries. Use when joining data across multiple sources or when no dedicated API skill exists for the data. Supports JSON/JSONB introspection and Jupyter notebook export. Not for single-source queries where a dedicated API skill is available.
+category: ~~database
+service: postgresql
 ---
 
-# PostgreSQL Database Access
+# PostgreSQL
 
 ## Purpose
 
-**Use this skill for CROSS-DATA-SOURCE queries only.** This skill enables direct interaction with PostgreSQL databases that contain data from multiple sources using `~~database` tools. It translates natural language questions into SQL queries, executes them, and interprets the results. Special support for JSON/JSONB document store tables commonly used for API data (Shopify, Gorgias, Instagram, etc.).
+**Use this skill for CROSS-DATA-SOURCE queries only.** This skill enables direct interaction with PostgreSQL databases that contain data from multiple sources via a client script. It translates natural language questions into SQL queries, executes them, and interprets the results. Special support for JSON/JSONB document store tables commonly used for API data (Shopify, Gorgias, Instagram, etc.).
 
-Authentication is handled by the MCP server configuration.
+Authentication is handled automatically by `lib/auth.js`.
 
 ## When to Use
 
@@ -29,19 +31,25 @@ Activate this skill when the user:
 - **Website behavior**: Use google-analytics skill for traffic, page views, sessions, conversions (e.g., "What's our bounce rate?" -> use google-analytics)
 - **Single-source queries**: If the question only involves one data source, use that source's primary skill
 
-## Available Tools
+## Client Script
 
-The `~~database` MCP server provides tools for:
-- **List tables** - List all tables in the database
-- **Get schema** - Get column names, types, and constraints for a specific table
-- **Introspect JSON** - Analyze the structure of JSON/JSONB data in a specific column
-- **Execute query** - Run SQL queries and return results
-- **Scan all tables** - Scan all tables and cache schemas to `references/schemas/`
-- **Export to notebook** - Create a Jupyter notebook with query and results
+**Path:** `skills/postgresql/scripts/client.js`
+
+### Commands
+
+| Command | Description |
+|---------|-------------|
+| `query (SQL string) [--params JSON_ARRAY]` | Execute a SQL query with optional parameterized values |
+| `list-tables` | List all tables in the database |
+| `get-schema --table [--schema]` | Get column names, types, and constraints for a table |
+| `scan-all` | Scan all tables and cache schemas to `references/schemas/` |
+| `introspect-json --table --column [--limit]` | Analyze the structure of JSON/JSONB data in a column |
+
+## Key API Concepts
+
+PostgreSQL via the `pg` npm package (connection string based). Many tables use JSONB columns for API-synced data. Use `data->>'field'` for text extraction and `data->'field'` for nested objects/arrays.
 
 ## Natural Language to SQL Translation Process
-
-When a user asks a natural language question about data, follow this process:
 
 ### Step 1: Understand the Question
 
@@ -56,27 +64,17 @@ Extract key information:
 Map natural language terms to database tables:
 - **ALWAYS check cached schemas in `references/schemas/` directory FIRST**
 - Schema files are named `{table_name}.json` (e.g., `dm_orders.json`, `shopify_orders.json`)
-- Only run list-tables if you need to discover new tables not in cache
-- Common mappings:
-  - "orders" -> `shopify_orders`
-  - "customers" -> `shopify_customers`
-  - "tickets" -> `gorgias_tickets`
-  - "products" -> `shopify_products`
+- Only run `list-tables` if you need to discover new tables not in cache
 
 ### Step 3: Get Table Schema from Cache
 
 For identified tables, read their schema from cached files:
 - **Read the cached schema file** from `references/schemas/{table_name}.json`
-- Cached schemas include:
-  - Column names and types
-  - JSON field structures (for JSONB columns like `data`)
-  - Sample values
+- Cached schemas include column names and types, JSON field structures, and sample values
 - Pay special attention to JSONB columns (usually named `data`)
-- **ONLY use schema introspection tools if the cached schema is missing or unclear**
+- **ONLY use `introspect-json` if the cached schema is missing or unclear**
 
 ### Step 4: Construct SQL Query
-
-Build the SQL query using these best practices:
 
 **EFFICIENCY RULE: Execute ONE query instead of multiple queries**
 
@@ -105,25 +103,16 @@ WHERE created_at >= '2024-10-01'
 
 **Key principle:** Let PostgreSQL do filtering, let JavaScript do extraction and transformation.
 
-### Step 5: Execute Query
+### Step 5: Execute and Retry
 
-- Run the query using `~~database` query tools
-- If query fails with error, analyze the error message
-- Common fixes:
+- Run the query using the `query` command
+- If query fails, analyze the error message and adjust:
   - Column doesn't exist -> Check schema, might be in JSON column
   - Type mismatch -> Add proper casting (`::numeric`, `::date`, etc.)
-  - Invalid JSON path -> Check JSON structure with introspect-json
-  - Syntax error -> Review SQL syntax
+  - Invalid JSON path -> Check JSON structure with `introspect-json`
+- Maximum 2-3 retry attempts
 
-### Step 6: Retry on Error
-
-If query fails:
-1. Analyze error message carefully
-2. Adjust query based on error
-3. Re-execute
-4. Maximum 2-3 retry attempts
-
-### Step 7: Interpret Results
+### Step 6: Interpret Results
 
 Once query succeeds:
 1. Analyze the returned data
@@ -132,49 +121,22 @@ Once query succeeds:
 4. Format results clearly (table, list, or summary)
 5. Offer to export to Jupyter notebook if complex analysis
 
-## Reference Files
-
-Detailed examples and documentation are available in the `references/` directory:
-
-- **[workflow-examples.md](references/workflow-examples.md)** - Detailed step-by-step workflow examples for common query patterns
-- **[queries.md](references/queries.md)** - Collection of ready-to-use SQL query examples
-- **schemas/** - Cached table schemas with JSON field structures
-
 ## Schema Caching
 
-The scan-all command creates JSON schema files in `references/schemas/` directory. These files contain:
-- Column names and types
-- JSON field structures for JSON/JSONB columns
-- Sample values
-- Common query patterns
+The `scan-all` command creates JSON schema files in `references/schemas/`. These files contain column names and types, JSON field structures for JSONB columns, sample values, and common query patterns.
 
 **Always check cached schemas first** before running database introspection commands.
 
-## Security Notes
+## For Complex Operations
 
-- Never expose database credentials in output
-- Sanitize user input before constructing queries (prevent SQL injection)
-- Use parameterized queries when possible
-- Limit result sets to reasonable sizes (default LIMIT 1000)
-- Warn before executing DELETE or UPDATE queries
+```javascript
+import { apiRequest } from '../../../lib/http.js';
+const data = await apiRequest('postgresql', '/query', {
+  method: 'POST',
+  body: { sql: 'SELECT * FROM shopify_orders LIMIT 10' }
+});
+```
 
-## Troubleshooting
-
-**"Connection refused"**
-- Verify MCP server configuration
-- Check network/firewall settings
-
-**"Column does not exist"**
-- Column might be in JSON/JSONB field
-- Check schema with cached file in `references/schemas/`
-- Use introspect-json tools for JSON columns
-
-**"Invalid JSON path"**
-- Use introspect-json to see actual structure
-- Check for typos in field names
-- Verify field exists in sample data
-
-**"Type casting error"**
-- Add explicit casts: `::numeric`, `::integer`, `::date`
-- Check for null values
-- Verify data format
+## Reference Files
+- [examples.md](references/examples.md) — Usage patterns and queries
+- [documentation.md](references/documentation.md) — Full API documentation

@@ -1,17 +1,19 @@
 ---
 name: quickbooks
 description: Accounting and financial data from QuickBooks Online including financial reports (P&L, Balance Sheet, Cash Flow), invoices, bills, customers, vendors, accounts, payments, and journal entries. Activate when the user asks about accounting data, financial reports, financial transactions, accounts payable/receivable, or bookkeeping. Not for cross-source analysis.
+category: ~~accounting
+service: quickbooks
 ---
 
-# QuickBooks Online API Integration
+# QuickBooks
 
 ## Purpose
 
-This skill enables direct interaction with the QuickBooks Online (QBO) Accounting API using `~~accounting` tools. It translates natural language questions into API calls, executes them, and interprets the results. Provides access to all core accounting entities including invoices, bills, customers, vendors, accounts, payments, and more.
+This skill enables direct interaction with the QuickBooks Online (QBO) Accounting API via a client script. It translates natural language questions into API calls, executes them, and interprets the results. Provides access to all core accounting entities including invoices, bills, customers, vendors, accounts, payments, and more.
 
 **Use this skill for ACCOUNTING and FINANCIAL data from QuickBooks Online.**
 
-Authentication is handled by the MCP server configuration.
+Authentication is handled automatically by `lib/auth.js`.
 
 ## When to Use
 
@@ -35,14 +37,25 @@ Activate this skill when the user:
 - **Cross-source analysis**: Use postgresql skill when joining QBO data with other sources (e.g., "Compare QBO invoices with Shopify orders")
 - **Website analytics**: Use google-analytics skill for traffic and visitor data
 
-## Available Tools
+## Client Script
 
-The `~~accounting` MCP server provides tools for:
-- **Company info** - Retrieve company information and configuration
-- **Accounts** - List chart of accounts, filter by account type
-- **Entity CRUD** - Get, search, create, update, delete for all entity types
-- **Financial reports** - P&L, Balance Sheet, Cash Flow, Trial Balance, General Ledger, Aging reports, and more
-- **Convenience queries** - List customers, vendors, invoices, bills, items with status filtering
+**Path:** `skills/quickbooks/scripts/client.js`
+
+### Commands
+
+| Command | Description |
+|---------|-------------|
+| `test-auth` | Verify authentication is working |
+| `query (SQL query string) [--query]` | Execute a QBO SQL-like query |
+| `list-invoices [--limit, --start-date, --end-date]` | List invoices with optional filters |
+| `get-invoice --id` | Get a specific invoice by ID |
+| `list-expenses [--limit, --start-date, --end-date]` | List expenses with optional filters |
+| `list-accounts [--type]` | List chart of accounts, optionally filtered by type |
+| `get-report --report [--start-date, --end-date, --accounting-method]` | Run a financial report |
+
+## Key API Concepts
+
+QBO REST API v3. Uses a SQL-like query language for entity queries. Rate limit is 500 requests per minute per realm. Updates require a SyncToken (fetch latest version before modifying).
 
 ### Supported Entity Types
 
@@ -84,62 +97,13 @@ The `~~accounting` MCP server provides tools for:
 | AgedReceivableDetail | Detailed AR aging |
 | TransactionList | List of all transactions |
 
-## Natural Language to Query Translation
+## Query Syntax Reference
 
-When a user asks a natural language question about QuickBooks data, follow this process:
-
-### Step 1: Identify the Entity Type
-
-Map natural language terms to QBO entity types:
-- "invoices", "sales", "AR" -> Invoice
-- "bills", "payables", "AP" -> Bill
-- "customers", "clients" -> Customer
-- "vendors", "suppliers" -> Vendor
-- "accounts", "chart of accounts" -> Account
-- "payments received" -> Payment
-- "payments made", "bill payments" -> BillPayment
-- "products", "services", "items" -> Item
-- "journal entries", "adjustments" -> JournalEntry
-- "quotes", "estimates" -> Estimate
-- "purchases", "expenses" -> Purchase
-- "employees", "staff" -> Employee
-
-### Step 2: Determine Filter Conditions
-
-Convert natural language filters to QBO query syntax:
-
-**Status filters:**
-- "unpaid invoices" -> `Balance > '0'`
-- "paid bills" -> `Balance = '0'`
-- "active customers" -> `Active = true`
-- "inactive vendors" -> `Active = false`
-
-**Date filters:**
-- "this month" -> `TxnDate >= 'YYYY-MM-01'`
-- "last 30 days" -> `TxnDate >= 'YYYY-MM-DD'`
-- "due this week" -> `DueDate <= 'YYYY-MM-DD'`
-
-**Amount filters:**
-- "over $1000" -> `TotalAmt > '1000'`
-- "less than $500" -> `TotalAmt < '500'`
-
-### Step 3: Construct the Query
-
-Build the query using QBO's SQL-like syntax:
+QBO uses a SQL-like query language:
 
 ```
 SELECT * FROM EntityType WHERE conditions ORDER BY field [ASC|DESC] MAXRESULTS limit
 ```
-
-### Step 4: Execute and Interpret Results
-
-- Use `~~accounting` query tools with appropriate parameters
-- Parse the response and present in a clear format
-- Aggregate if needed (totals, counts, etc.)
-
-## Query Syntax Reference
-
-QBO uses a SQL-like query language. Key syntax elements:
 
 ### Operators
 - `=` - Equals
@@ -147,33 +111,6 @@ QBO uses a SQL-like query language. Key syntax elements:
 - `<`, `<=`, `>`, `>=` - Comparison
 - `IN` - In list: `Status IN ('Open', 'Pending')`
 - `LIKE` - Pattern match: `DisplayName LIKE '%Smith%'`
-
-### Common Fields by Entity
-
-**Invoice:**
-- `Id`, `DocNumber`, `TxnDate`, `DueDate`
-- `TotalAmt`, `Balance`
-- `CustomerRef` (customer ID)
-
-**Bill:**
-- `Id`, `DocNumber`, `TxnDate`, `DueDate`
-- `TotalAmt`, `Balance`
-- `VendorRef` (vendor ID)
-
-**Customer:**
-- `Id`, `DisplayName`, `CompanyName`
-- `PrimaryEmailAddr`, `PrimaryPhone`
-- `Balance`, `Active`
-
-**Vendor:**
-- `Id`, `DisplayName`, `CompanyName`
-- `PrimaryEmailAddr`, `PrimaryPhone`
-- `Balance`, `Active`
-
-**Account:**
-- `Id`, `Name`, `FullyQualifiedName`
-- `AccountType`, `AccountSubType`
-- `CurrentBalance`, `Active`
 
 ### Example Queries
 
@@ -191,50 +128,13 @@ SELECT * FROM Vendor WHERE DisplayName LIKE '%Supply%'
 SELECT * FROM JournalEntry ORDERBY MetaData.CreateTime DESC MAXRESULTS 20
 ```
 
-## API Rate Limits
+## For Complex Operations
 
-QuickBooks Online has the following rate limits:
-- **Sandbox:** 500 requests per minute
-- **Production:** 500 requests per minute per realm (company)
-- **Concurrent requests:** 10 per realm
+```javascript
+import { apiRequest } from '../../../lib/http.js';
+const data = await apiRequest('quickbooks', '/v3/company/{realmId}/query?query=SELECT * FROM Invoice');
+```
 
-If rate limited:
-- Wait 1 minute before retrying
-- Reduce query frequency
-- Use batch operations when available
-
-## Security Notes
-
-- Never expose client secrets or refresh tokens in output
-- Refresh tokens expire after 100 days of non-use
-- Always use HTTPS (API enforces this)
-- Be cautious with mutations that modify financial data
-- Warn before creating/updating/deleting accounting records
-
-## Troubleshooting
-
-**"Authentication failed"**
-- Verify MCP server configuration
-- Re-authenticate if tokens have expired
-
-**"Invalid realm" or "Company not found"**
-- Verify realm ID is correct in MCP configuration
-- Check the app has access to the company
-
-**"Entity not found"**
-- Verify the entity ID exists
-- Check entity type is correct (case-sensitive)
-- Use query tools to list available entities
-
-**"SyncToken mismatch"**
-- Another user modified the record
-- Fetch the latest version and use its SyncToken for updates
-
-**"Required field missing"**
-- Different entities have different required fields
-- Use get tools to see example of valid entity structure
-
-**"Rate limit exceeded"**
-- Wait 1 minute before retrying
-- Reduce request frequency
-- Consider batching operations
+## Reference Files
+- [examples.md](references/examples.md) — Usage patterns and queries
+- [documentation.md](references/documentation.md) — Full API documentation

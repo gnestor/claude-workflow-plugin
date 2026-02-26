@@ -20,7 +20,7 @@ This skill integrates tools from multiple `~~` categories:
 - **`~~database`** - PostgreSQL for cross-source data queries
 - **`~~browser`** - Browser automation for Google Trends fallback if API unavailable
 
-Authentication for all integrated tools is handled by their respective MCP server configurations.
+Authentication for all integrated tools is handled automatically by lib/auth.js.
 
 ## When to Use
 
