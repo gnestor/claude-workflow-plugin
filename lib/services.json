@@ -200,7 +200,7 @@
       { "key": "access_token", "label": "Access token", "secret": true, "auto": true },
       { "key": "refresh_token", "label": "Refresh token", "secret": true, "auto": true },
       { "key": "token_expiry", "label": "Token expiry", "secret": false, "auto": true },
-      { "key": "realm_id", "label": "Company ID (Realm ID)", "secret": false }
+      { "key": "realm_id", "label": "Company ID (Realm ID)", "secret": false, "auto": true }
     ],
     "tokenUrl": "https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer",
     "oauthProxy": "https://workflow-auth.hammies.workers.dev",
