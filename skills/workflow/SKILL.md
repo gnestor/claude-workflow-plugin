@@ -65,14 +65,22 @@ The Stop hook handles post-execution updates to PLAN.md (see below).
 
 When a user makes a request that might match an existing workflow:
 
-1. Read `.claude/docs/WORKFLOWS.md` (if it exists)
-2. Compare the user's request against each workflow's `triggers` and `description`
-3. If a match is found, offer to run the existing workflow
-4. If no match, proceed normally — may lead to creating a new workflow if the task is repeatable
+1. **Check the registry first**: Read `.claude/docs/WORKFLOWS.md` (if it exists) and compare the user's request against each workflow's `triggers` and `description`.
+2. **Scan the workflows directory**: If no registry exists or the request doesn't match, check for a `workflows/` directory in the current working directory. List all subdirectories and read the first 10 lines of any `WORKFLOW.md` or `PLAN.md` found.
+3. **Match on triggers**: Compare the user's phrasing against `triggers` frontmatter. A fuzzy match is fine — if in doubt, ask the user.
+4. If a match is found, offer to run the existing workflow before starting from scratch.
+5. If no match, proceed normally — the task may lead to creating a new workflow if it's repeatable.
+
+**On startup**, if the user's first message sounds like a recurring business task (e.g., "process emails", "run triage", "pull analytics", "weekly report"), proactively check for matching workflows before responding.
 
 ## Listing Workflows
 
-Read `.claude/docs/WORKFLOWS.md` and present it. If the registry doesn't exist but `workflows/` directories do, scan for PLAN.md files to build it.
+When the user asks "what can you do?", "list workflows", or "what workflows exist":
+
+1. Read `.claude/docs/WORKFLOWS.md` if present
+2. Also scan `workflows/*/WORKFLOW.md` and `workflows/*/PLAN.md` in the current directory
+3. Present a clean list: name, description, and trigger phrases for each
+4. If neither exists, explain that no workflows have been set up yet and offer to create one
 
 ## Editing a Workflow
 
