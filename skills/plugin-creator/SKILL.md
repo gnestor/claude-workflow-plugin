@@ -1,56 +1,31 @@
 ---
 name: plugin-creator
-description: Creates inbox source plugins that connect new data sources to the unified inbox. Use when user says "create a plugin for X", "add X to the inbox", "connect X to inbox", "build an inbox plugin for X", or wants to add a new data source to the inbox app.
+description: Creates inbox plugins that connect external services to the unified inbox. Use when user says "create a plugin for X", "add X to the inbox", "connect X to inbox", "build an inbox plugin for X", or wants to add a new data source or integration to the inbox app.
 ---
 
 # Inbox Plugin Creator
 
-Creates a TypeScript `SourcePlugin` that appears as a new tab in the unified inbox.
+Creates a TypeScript `Plugin` that appears as a new source tab in the unified inbox. Plugins can list items, show detail views, handle mutations (archive, reply, mark-done), and link items to agent sessions.
 
-Plugins live at `{workspace}/inbox-plugins/{id}.ts`. The inbox server scans this directory on startup and auto-generates REST routes for each plugin.
+Plugins live at `{workspace}/plugins/{id}/plugin.ts`. The inbox server scans this directory on startup and auto-generates REST routes at `/api/{pluginId}/*`.
 
-## SourcePlugin Interface
-
-```typescript
-// packages/inbox/src/types/plugin.ts
-export interface SourcePlugin {
-  id: string          // Unique slug used in API routes and tab navigation
-  name: string        // Display name shown in the nav tab
-  icon: string        // Lucide icon name (e.g. "MessageSquare", "Github", "ShoppingCart")
-  fieldSchema: FieldDef[]
-
-  query(filters: Record<string, string>, cursor?: string): Promise<QueryResult>
-  mutate(id: string, action: string, payload?: unknown): Promise<void>
-
-  // Optional: sub-items (e.g. messages within a channel)
-  querySubItems?(itemId: string, filters: Record<string, string>, cursor?: string): Promise<QueryResult>
-
-  // Optional: custom detail view layout (auto-generated from fieldSchema if omitted)
-  detailSchema?: WidgetDef[]
-}
-
-export interface FieldDef {
-  id: string            // Dot-path into the item object, e.g. "status", "author.name"
-  label: string
-  type: "text" | "html" | "markdown" | "date" | "number" | "boolean" | "select" | "multiselect"
-  listRole?: "title" | "subtitle" | "timestamp" | "hidden"  // Inferred from type if omitted
-  badge?: { show: "always" | "if-set"; variant?: "default" | "secondary" | "destructive" | "outline" }
-  filter?: { filterable: true; filterOptions?: string[] | (() => Promise<string[]>) }
-}
-
-export interface QueryResult {
-  items: Array<{ id: string; [key: string]: unknown }>
-  nextCursor?: string
-}
-```
-
-**Auth pattern:** Read credentials from `process.env` (sourced from workspace `.env`). No credential storage in plugin files.
+See `references/plugin-interface.md` for the complete type reference, `references/patterns.md` for common implementation patterns, and `references/slack-plugin-example.md` for a fully annotated real-world example.
 
 ## Workflow
 
+### Step 0 — Check for existing skills
+
+Before building a plugin, check if an existing skill covers the service's API:
+
+```bash
+ls skills/*/SKILL.md  # e.g., skills/slack/SKILL.md has all Slack API patterns
+```
+
+If a skill exists, reuse its API patterns, auth setup, and client code. The skill's `scripts/client.js` is a working reference for every API call you'll need.
+
 ### Step 1 — Research the API
 
-Web search for: `{source} API documentation`, `{source} REST API authentication`, `{source} API rate limits`
+If no existing skill exists, web search for: `{source} API documentation`, `{source} REST API authentication`, `{source} API rate limits`
 
 Identify:
 - Base URL and authentication method (API key, OAuth token, Bearer token)
@@ -63,106 +38,141 @@ Identify:
 ### Step 2 — Plan the plugin
 
 Before writing code, define:
-- **Items**: What objects from this source appear in the inbox? (e.g. issues, orders, messages)
+
+- **Items**: What objects from this source appear in the list view? (e.g. channels, issues, orders)
+- **Sub-items**: Do items contain child items? (e.g. messages within a channel, comments on an issue)
 - **Field mapping**: For each API field, choose `type`, `listRole`, whether to badge, whether to filter
   - `listRole: "title"` → primary text in list item
   - `listRole: "subtitle"` → secondary line
   - `listRole: "timestamp"` → date shown in list
   - `listRole: "hidden"` → available in detail view only
-- **Icon**: Choose a Lucide icon that matches the source (search lucide.dev)
-- **Actions**: What mutations make sense? (archive, snooze, mark-done, reply)
+- **Icon & emoji**: Choose a Lucide icon and emoji that matches the source (search lucide.dev)
+- **Actions**: What mutations make sense? (archive, reply, mark-done, add-reaction)
+- **Custom routes**: Does the plugin need endpoints beyond query/mutate? (attachment proxy, thread view, send endpoint)
+- **Auth**: Is it per-user OAuth or workspace API key? Set `auth: { integrationId, scope }`
 - **Env vars**: What environment variables are needed in `{workspace}/.env`?
 
 Show the user the mapping plan and ask for confirmation before writing code.
 
 ### Step 3 — Generate TypeScript
 
-Create `{workspace}/inbox-plugins/{id}.ts`:
+Create `{workspace}/plugins/{id}/plugin.ts`:
 
 ```typescript
-// Example structure — adapt to the actual API
-import type { SourcePlugin } from '../packages/inbox/src/types/plugin'
+import type { Plugin, PluginItem, PluginContext } from "{path-to-inbox}/src/types/plugin.js"
 
-const BASE_URL = 'https://api.example.com'
-
-function getHeaders() {
-  return {
-    Authorization: `Bearer ${process.env.EXAMPLE_API_TOKEN}`,
-    'Content-Type': 'application/json',
-  }
+// API helpers
+async function apiRequest<T>(path: string, body = {}): Promise<T> {
+  const token = process.env.EXAMPLE_API_TOKEN
+  if (!token) throw new Error("EXAMPLE_API_TOKEN is not set")
+  const res = await fetch(`https://api.example.com${path}`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  })
+  const data = await res.json()
+  return data as T
 }
 
-export default {
-  id: '{id}',
-  name: '{name}',
-  icon: '{LucideIconName}',
+const plugin: Plugin = {
+  id: "example",
+  name: "Example",
+  icon: "Box",
+  emoji: "📦",
+  auth: { integrationId: "example", scope: "workspace" },
 
   fieldSchema: [
-    { id: 'title', label: 'Title', type: 'text', listRole: 'title' },
-    { id: 'status', label: 'Status', type: 'select', listRole: 'subtitle',
-      badge: { show: 'always' },
-      filter: { filterable: true, filterOptions: ['open', 'closed'] } },
-    { id: 'created_at', label: 'Created', type: 'date', listRole: 'timestamp' },
-    { id: 'body', label: 'Body', type: 'markdown', listRole: 'hidden' },
+    { id: "title", label: "Title", type: "text", listRole: "title" },
+    { id: "status", label: "Status", type: "select",
+      badge: { show: "always", variant: "outline" },
+      filter: { filterable: true, filterOptions: ["open", "closed"] } },
+    { id: "updatedAt", label: "Updated", type: "date", listRole: "timestamp" },
+    { id: "body", label: "Body", type: "markdown", listRole: "hidden" },
   ],
 
   async query(filters, cursor) {
-    const params = new URLSearchParams()
-    if (cursor) params.set('cursor', cursor)
-    if (filters.status) params.set('status', filters.status)
-
-    const res = await fetch(`${BASE_URL}/items?${params}`, { headers: getHeaders() })
-    if (!res.ok) throw new Error(`API error: ${res.status}`)
-    const data = await res.json()
-
+    // Fetch items with pagination
+    const data = await apiRequest<{ items: any[]; next?: string }>("/items", {
+      status: filters.status,
+      cursor,
+    })
     return {
-      items: data.items.map((item: unknown) => ({ id: item.id, ...item })),
-      nextCursor: data.next_cursor ?? undefined,
+      items: data.items.map((i) => ({ id: i.id, ...i })),
+      nextCursor: data.next,
     }
+  },
+
+  async getItem(id) {
+    // Fetch full detail for a single item
+    return apiRequest(`/items/${id}`)
+  },
+
+  async querySubItems(itemId, filters, cursor) {
+    // Fetch child items (e.g. comments, messages)
+    const data = await apiRequest<{ items: any[]; next?: string }>(
+      `/items/${itemId}/comments`,
+      { cursor }
+    )
+    return { items: data.items, nextCursor: data.next }
   },
 
   async mutate(id, action, payload) {
-    if (action === 'archive') {
-      await fetch(`${BASE_URL}/items/${id}/archive`, {
-        method: 'POST',
-        headers: getHeaders(),
-      })
+    switch (action) {
+      case "archive":
+        await apiRequest(`/items/${id}/archive`, {})
+        break
+      case "reply":
+        const { text } = (payload ?? {}) as { text?: string }
+        if (!text) throw new Error("reply requires { text }")
+        await apiRequest(`/items/${id}/comments`, { text })
+        break
     }
   },
-} satisfies SourcePlugin
+
+  // Dynamic filter options (fetch from API)
+  filterOptions: {
+    status: async () => {
+      const data = await apiRequest<{ statuses: string[] }>("/statuses")
+      return data.statuses
+    },
+  },
+
+  // Custom routes for operations beyond query/mutate
+  routes(app, { getContext }) {
+    app.post("/send", async (c) => {
+      const { itemId, text } = await c.req.json()
+      await apiRequest(`/items/${itemId}/comments`, { text })
+      return c.json({ ok: true })
+    })
+  },
+}
+
+export default plugin
 ```
 
 ### Step 4 — Save and activate
 
-1. Write the plugin to `{workspace}/inbox-plugins/{id}.ts`
+1. Write the plugin to `{workspace}/plugins/{id}/plugin.ts`
 2. Add required env vars to `{workspace}/.env` (append, don't overwrite)
 3. Tell the user:
    - Which env vars to fill in (if not already set)
    - Restart command: `kill -9 $(lsof -ti :3002) && cd packages/inbox && npm run dev:server -- --workspace ../agent`
    - The plugin appears as a new tab in the inbox automatically on restart
 
-## Common Patterns
+### Step 5 — Verify
 
-**Sub-items** (e.g. Slack channel → messages, GitHub repo → PRs):
-```typescript
-async querySubItems(itemId, filters, cursor) {
-  // fetch items within the parent item
-}
+After restart, check the plugin loaded:
+
+```bash
+curl -s http://localhost:3002/api/plugins | jq '.[].id'
 ```
 
-**Async filter options** (fetch valid values from the API):
-```typescript
-filter: {
-  filterable: true,
-  filterOptions: async () => {
-    const res = await fetch(`${BASE_URL}/labels`, { headers: getHeaders() })
-    const data = await res.json()
-    return data.labels.map((l: { name: string }) => l.name)
-  }
-}
-```
+The new plugin ID should appear in the list. Open the inbox to verify the sidebar shows the new source.
 
-**HTML body** (sanitized by inbox renderer):
-```typescript
-{ id: 'body_html', label: 'Body', type: 'html', listRole: 'hidden' }
-```
+## Quick Reference
+
+| Concept | File | Purpose |
+|---------|------|---------|
+| Plugin interface | `references/plugin-interface.md` | All types, methods, and fields |
+| Worked example | `references/slack-plugin-example.md` | Annotated Slack plugin (400 lines) |
+| Common patterns | `references/patterns.md` | Replies, session linking, custom routes, filters |

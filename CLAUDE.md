@@ -6,7 +6,7 @@ Agent infrastructure for the Hammies inbox workspace. Three skills:
 
 2. **workflow** — Creates and executes reusable multi-step automations. Each workflow has a `PLAN.md` that evolves inline based on what actually works. Tracked in `.claude/docs/WORKFLOWS.md`.
 
-3. **plugin-creator** — Builds TypeScript `SourcePlugin` files that add new data sources to the inbox app. Plugins live in `{workspace}/inbox-plugins/` and are auto-discovered on server restart.
+3. **plugin-creator** — Builds TypeScript `Plugin` files that add new data sources to the inbox app. Plugins live in `{workspace}/plugins/{id}/plugin.ts` and are auto-discovered on server restart.
 
 ## Hooks
 
