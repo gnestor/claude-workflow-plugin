@@ -77,7 +77,7 @@ interface FieldDef {
 
   filter?: {
     filterable: true
-    filterOptions?: string[] | (() => Promise<string[]>)
+    filterOptions?: (string | { value: string; label: string })[] | (() => Promise<string[]>)
     filterType?: "select" | "multiselect" | "text" | "date-range"
   }
 

@@ -1,6 +1,6 @@
 ---
 name: plugin-creator
-description: Creates inbox plugins that connect external services to the unified inbox. Use when user says "create a plugin for X", "add X to the inbox", "connect X to inbox", "build an inbox plugin for X", or wants to add a new data source or integration to the inbox app.
+description: Creates inbox plugins that connect external services to the unified inbox. Use when user says "create a plugin for X", "add X to the inbox", "connect X to inbox", "build an inbox plugin for X", or wants to add a new data source or integration to the Inbox app.
 ---
 
 # Inbox Plugin Creator
@@ -18,10 +18,27 @@ See `references/plugin-interface.md` for the complete type reference, `reference
 Before building a plugin, check if an existing skill covers the service's API:
 
 ```bash
-ls skills/*/SKILL.md  # e.g., skills/slack/SKILL.md has all Slack API patterns
+ls skills/*/SKILL.md  # e.g., skills/gorgias/SKILL.md, skills/slack/SKILL.md
 ```
 
 If a skill exists, reuse its API patterns, auth setup, and client code. The skill's `scripts/client.js` is a working reference for every API call you'll need.
+
+#### Translating a skill to a plugin
+
+When an existing skill covers the service, map its commands to Plugin methods:
+
+| Skill command pattern | Plugin method | Notes |
+|----------------------|---------------|-------|
+| `list-*`, `search-*` | `query()` | Map response fields → PluginItem fields via fieldSchema |
+| `get-*` (single item) | `getItem()` | Full detail for one item |
+| `get-*` (child items, e.g. ticket messages) | `querySubItems()` | Parent→child relationship |
+| `create-*`, `update-*`, `reply-*` | `mutate()` | Each becomes a named action |
+| Dynamic option lists | `filterOptions` | Fetch available statuses, assignees, etc. |
+
+To find the skill's auth and env vars:
+1. Read `skills/{service}/scripts/client.js` — look for `process.env.*` at the top
+2. Check `skills/{service}/lib/auth.js` if it exists — shows the auth pattern
+3. Copy the base URL and auth header pattern into your plugin's API helper
 
 ### Step 1 — Research the API
 
@@ -59,7 +76,8 @@ Show the user the mapping plan and ask for confirmation before writing code.
 Create `{workspace}/plugins/{id}/plugin.ts`:
 
 ```typescript
-import type { Plugin, PluginItem, PluginContext } from "{path-to-inbox}/src/types/plugin.js"
+// From {workspace}/plugins/{id}/plugin.ts, go up to packages/, then into inbox/src/types/
+import type { Plugin, PluginItem, PluginContext } from "../../../inbox/src/types/plugin.js"
 
 // API helpers
 async function apiRequest<T>(path: string, body = {}): Promise<T> {
@@ -156,7 +174,7 @@ export default plugin
 2. Add required env vars to `{workspace}/.env` (append, don't overwrite)
 3. Tell the user:
    - Which env vars to fill in (if not already set)
-   - Restart command: `kill -9 $(lsof -ti :3002) && cd packages/inbox && npm run dev:server -- --workspace ../agent`
+   - Restart the server: `npm run inbox:dev` (from workspace root) or `kill -9 $(lsof -ti :3002) && cd packages/inbox && npm run dev:server -- --workspace ../agent`
    - The plugin appears as a new tab in the inbox automatically on restart
 
 ### Step 5 — Verify

@@ -224,3 +224,85 @@ return {
 ```
 
 The generic `PluginDetail` renders this as an external link icon in the header toolbar.
+
+## Ticket / Support Plugin (e.g. Gorgias, Zendesk, Linear)
+
+For services where the primary items are tickets/issues with threaded messages:
+
+- **Items** = tickets (list view with status, assignee, channel badges + filters)
+- **Sub-items** = messages within a ticket (via `querySubItems`)
+- **Mutations** = reply, close, assign, tag, snooze
+- **Auth** = workspace API key (domain + API key + email in `.env`)
+
+### Field schema pattern
+
+```typescript
+fieldSchema: [
+  { id: "subject", label: "Subject", type: "text", listRole: "title" },
+  { id: "customerEmail", label: "Customer", type: "text", listRole: "subtitle" },
+  { id: "lastMessageAt", label: "Updated", type: "date", listRole: "timestamp" },
+  { id: "status", label: "Status", type: "select",
+    filter: { filterable: true, filterOptions: ["open", "closed", "pending"] },
+    badge: { show: "always", variant: "secondary",
+      colorFn: (v) => {
+        if (v === "open") return "bg-chart-2/20 text-chart-2"
+        if (v === "closed") return "bg-muted/60 text-muted-foreground"
+        if (v === "pending") return "bg-chart-4/20 text-chart-4"
+        return ""
+      },
+    } },
+  { id: "channel", label: "Channel", type: "select",
+    filter: { filterable: true, filterOptions: ["email", "chat", "phone", "social"] },
+    badge: { show: "always", variant: "outline" } },
+  { id: "assignee", label: "Assignee", type: "text",
+    filter: { filterable: true },
+    badge: { show: "if-set", variant: "secondary" } },
+  { id: "tags", label: "Tags", type: "multiselect", listRole: "hidden" },
+]
+```
+
+### Sub-items pattern (messages in a ticket)
+
+```typescript
+async querySubItems(ticketId, filters, cursor, ctx) {
+  const messages = await apiRequest<{ data: any[] }>(`/tickets/${ticketId}/messages`)
+  return {
+    items: messages.data.map((m) => ({
+      id: String(m.id),
+      text: m.body_text || stripHtml(m.body_html),
+      userName: m.sender?.name || m.sender?.email,
+      userAvatar: m.sender?.avatar,
+      ts: String(new Date(m.created_datetime).getTime() / 1000),
+      isInternal: m.via === "internal-note",
+    })),
+  }
+}
+```
+
+Include `userName` and `userAvatar` on each sub-item so the generic `MessageRow` renders avatars and names. The `ts` field should be a Unix timestamp string (seconds) for consistent formatting.
+
+### Mutation pattern (reply + close)
+
+```typescript
+async mutate(id, action, payload) {
+  switch (action) {
+    case "reply": {
+      const { text, isInternal } = (payload ?? {}) as { text?: string; isInternal?: boolean }
+      if (!text) throw new Error("reply requires { text }")
+      await apiRequest(`/tickets/${id}/messages`, {
+        method: "POST",
+        body: { channel: "internal-note", body_html: `<p>${text}</p>` },
+      })
+      break
+    }
+    case "close":
+      await apiRequest(`/tickets/${id}`, { method: "PATCH", body: { status: "closed" } })
+      break
+    case "assign": {
+      const { userId } = (payload ?? {}) as { userId?: number }
+      await apiRequest(`/tickets/${id}`, { method: "PATCH", body: { assignee_user: { id: userId } } })
+      break
+    }
+  }
+}
+```
