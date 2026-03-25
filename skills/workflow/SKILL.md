@@ -9,31 +9,34 @@ Create, run, and manage repeatable automations. Workflows are user-specific plan
 
 ## Creating a Workflow
 
-Use Claude Code's plan mode naturally. The workflow skill adds these conventions:
+Enter Claude Code's Plan Mode (`/plan`) to design the workflow collaboratively. The workflow skill adds these conventions:
 
-### Step 0: Propose the workflow directory
+### Step 0: Propose the workflow
 
-Before planning the workflow steps, propose a name and location:
+Before entering plan mode, confirm with the user:
 
-- **Default location:** `workflows/{name}/` relative to the plugin root
 - **Name:** kebab-case, descriptive (e.g., `weekly-revenue-report`, `email-campaign-draft`)
-- Use AskUserQuestion to confirm the name, location, and collect any requirements
+- **Location:** `workflows/{name}/` in the workspace
+- **Purpose:** What this workflow achieves and when to trigger it
+- Use AskUserQuestion to confirm and collect requirements
 
-### Planning
+### Step 1: Design in Plan Mode
 
-Plan mode handles the rest. When drafting the plan:
+Enter plan mode and draft the workflow plan:
 
-- Reference `~~category` placeholders for tool access (not specific tool names)
-- Use `{{parameter_name}}` for values that change between runs
-- Include an Objective section explaining what the workflow achieves and why
-- Keep steps concrete and actionable
+- Write clear, actionable steps that reference tools and skills by name
+- Use `{{parameter_name}}` for values that change between runs (e.g., `{{date_range}}`, `{{recipient}}`)
+- Include a Context section explaining the objective and any constraints
+- Include a Verification section describing how to confirm each step succeeded
+- Keep steps concrete — each step should be independently executable
 
-### After plan approval
+### Step 2: Save the workflow
 
-1. Create the workflow directory and `outputs/` subdirectory
-2. Save the approved plan as `PLAN.md` using the schema from `references/plan-template.md`
-3. Add YAML frontmatter with name, description, triggers, parameters, and connector dependencies
-4. Register the workflow in `.claude/docs/WORKFLOWS.md`
+After the plan is approved and you exit plan mode:
+
+1. Create `workflows/{name}/` and `workflows/{name}/outputs/`
+2. Save the plan as `PLAN.md` with YAML frontmatter (see Frontmatter fields below)
+3. Register the workflow in `.claude/docs/WORKFLOWS.md`
 
 ### Frontmatter fields
 
