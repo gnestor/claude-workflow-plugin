@@ -20,7 +20,7 @@ Modeled on the [skill-creator](https://github.com/anthropics/claude-plugins-offi
 
 ### plugin-creator
 
-Creates TypeScript `SourcePlugin` files that add new data sources to the inbox app. Given a data source name, the skill:
+Creates TypeScript `SourcePlugin` files that add new data sources to the Inbox app. Given a data source name, the skill:
 1. Researches the API (endpoints, auth, pagination)
 2. Maps fields to the SourcePlugin interface
 3. Generates a TypeScript implementation
@@ -42,9 +42,9 @@ A single Stop hook evaluates whether meaningful work was done. If so:
 claude install gnestor/claude-workflow-plugin
 ```
 
-### With Inbox App
+### With Inbox app
 
-The inbox app loads this plugin automatically via the Claude Agent SDK. See `packages/inbox/server/lib/session-manager.ts`.
+The Inbox app loads this plugin automatically via the Claude Agent SDK. See `packages/inbox/server/lib/session-manager.ts`.
 
 ### Companion Plugins
 

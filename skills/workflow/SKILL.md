@@ -5,15 +5,13 @@ description: "Create, run, and manage repeatable workflows. Activate when: user 
 
 # Workflow Manager
 
-Create, run, and manage repeatable automations. Workflows are user-specific plans that orchestrate skills and tools for specific outcomes. They're created through conversation using Claude Code's built-in plan mode, saved as PLAN.md files, and improved automatically after each execution.
+Create, run, and manage repeatable automations. Workflows are PLAN.md files created through Claude Code's Plan Mode, saved in `workflows/`, and improved automatically after each execution.
 
 ## Creating a Workflow
 
-Enter Claude Code's Plan Mode (`/plan`) to design the workflow collaboratively. The workflow skill adds these conventions:
-
 ### Step 0: Propose the workflow
 
-Before entering plan mode, confirm with the user:
+Before entering Plan Mode, confirm with the user:
 
 - **Name:** kebab-case, descriptive (e.g., `weekly-revenue-report`, `email-campaign-draft`)
 - **Location:** `workflows/{name}/` in the workspace
@@ -22,33 +20,49 @@ Before entering plan mode, confirm with the user:
 
 ### Step 1: Design in Plan Mode
 
-Enter plan mode and draft the workflow plan:
+Enter Plan Mode (`/plan`) and draft the workflow plan:
 
 - Write clear, actionable steps that reference tools and skills by name
 - Use `{{parameter_name}}` for values that change between runs (e.g., `{{date_range}}`, `{{recipient}}`)
-- Include a Context section explaining the objective and any constraints
-- Include a Verification section describing how to confirm each step succeeded
+- Include verification for each step (how to confirm it succeeded)
 - Keep steps concrete — each step should be independently executable
 
 ### Step 2: Save the workflow
 
-After the plan is approved and you exit plan mode:
+After the plan is approved and you exit Plan Mode:
 
-1. Create `workflows/{name}/` and `workflows/{name}/outputs/`
-2. Save the plan as `PLAN.md` with YAML frontmatter (see Frontmatter fields below)
-3. Register the workflow in `.claude/docs/WORKFLOWS.md`
+1. Create `workflows/{name}/`
+2. Save the plan as `PLAN.md` with YAML frontmatter (see below)
+3. Add the workflow to `workflows/index.md`
 
-### Frontmatter fields
+### Frontmatter
+
+```yaml
+---
+name: workflow-name
+description: "What this workflow does (1-2 sentences)"
+triggers:
+  - "natural language phrase that should match this workflow"
+  - "another trigger phrase"
+skills:
+  - skill-name
+parameters:
+  - name: param_name
+    description: "What this parameter controls"
+    default: null
+created: YYYY-MM-DD
+last_run: null
+last_run_status: null
+run_count: 0
+---
+```
 
 | Field | Required | Description |
 |-------|----------|-------------|
 | `name` | Yes | kebab-case identifier |
 | `description` | Yes | What this workflow does (1-2 sentences) |
 | `triggers` | Yes | Natural language phrases that should match this workflow |
-| `schedule` | No | Natural language schedule (future — not yet implemented) |
-| `destination` | No | Where output goes. Default: `outputs/` |
 | `skills` | No | Skills this workflow depends on |
-| `connectors` | No | `~~category` tool categories this workflow uses |
 | `parameters` | No | Runtime parameters with name, description, and optional default |
 | `created` | Auto | Date created |
 | `last_run` | Auto | Timestamp of last execution |
@@ -59,20 +73,28 @@ After the plan is approved and you exit plan mode:
 
 1. **Read the PLAN.md** — the steps are the single source of truth (they include learnings from prior runs)
 2. **Resolve parameters** — use values from the user's request, fall back to defaults in frontmatter, ask if no default exists
-3. **Execute steps** — follow the plan, delegating to subagents per CLAUDE.md guidelines
-4. **Save output** — to `{workflow_dir}/outputs/YYYY-MM-DD-HH-MM-SS.md` by default, or to the destination specified in frontmatter or by the user (Notion, Google Drive, email, etc.)
+3. **Execute steps** — follow the plan sequentially
+4. **Save output** — to `{workflow_dir}/outputs/YYYY-MM-DD-HH-MM-SS.md` or to the destination specified by the user (Notion, Google Drive, email, etc.)
 
-The Stop hook handles post-execution updates to PLAN.md (see below).
+## Post-Execution Updates
+
+After a workflow runs, before the session ends:
+
+- Compare execution to the PLAN.md steps
+- **Update steps inline** if execution deviated or uncovered better approaches — PLAN.md always reflects the current best instructions
+- Update frontmatter: `last_run`, `last_run_status`, increment `run_count`
+- Update `workflows/index.md` if description or triggers changed
+
+There are no separate "execution notes" sections. The steps evolve.
 
 ## Discovering Workflows
 
 When a user makes a request that might match an existing workflow:
 
-1. **Check the registry first**: Read `.claude/docs/WORKFLOWS.md` (if it exists) and compare the user's request against each workflow's `triggers` and `description`.
-2. **Scan the workflows directory**: If no registry exists or the request doesn't match, check for a `workflows/` directory in the current working directory. List all subdirectories and read the first 10 lines of any `WORKFLOW.md` or `PLAN.md` found.
-3. **Match on triggers**: Compare the user's phrasing against `triggers` frontmatter. A fuzzy match is fine — if in doubt, ask the user.
-4. If a match is found, offer to run the existing workflow before starting from scratch.
-5. If no match, proceed normally — the task may lead to creating a new workflow if it's repeatable.
+1. **Read the index**: Read `workflows/index.md` and compare the user's request against each workflow's triggers and description.
+2. **Match on triggers**: A fuzzy match is fine — if in doubt, ask the user.
+3. If a match is found, offer to run the existing workflow before starting from scratch.
+4. If no match, proceed normally — the task may lead to creating a new workflow if it's repeatable.
 
 **On startup**, if the user's first message sounds like a recurring business task (e.g., "process emails", "run triage", "pull analytics", "weekly report"), proactively check for matching workflows before responding.
 
@@ -80,29 +102,35 @@ When a user makes a request that might match an existing workflow:
 
 When the user asks "what can you do?", "list workflows", or "what workflows exist":
 
-1. Read `.claude/docs/WORKFLOWS.md` if present
-2. Also scan `workflows/*/WORKFLOW.md` and `workflows/*/PLAN.md` in the current directory
-3. Present a clean list: name, description, and trigger phrases for each
-4. If neither exists, explain that no workflows have been set up yet and offer to create one
+1. Read `workflows/index.md`
+2. Present a clean list: name, description, and trigger phrases for each
+3. If the index doesn't exist, scan `workflows/*/PLAN.md` and `workflows/*/WORKFLOW.md` as a fallback
 
 ## Editing a Workflow
 
-Read the existing PLAN.md, present it, iterate with the user, save updates. Update the registry if name, description, or schedule changed.
+Read the existing PLAN.md, present it, iterate with the user, save updates. Update `workflows/index.md` if name, description, or triggers changed.
 
 ## Deleting a Workflow
 
-Confirm with the user, remove the directory, update `.claude/docs/WORKFLOWS.md`.
+Confirm with the user, remove the directory, remove the row from `workflows/index.md`.
 
-## Post-Execution Updates (Stop Hook)
+## Stock Workflows
 
-After a workflow runs, the Stop hook:
+Two workflows ship as starting points:
 
-- Compares execution to the PLAN.md steps
-- **Updates steps inline** if execution deviated or uncovered better approaches — PLAN.md always reflects the current best instructions
-- Updates frontmatter: `last_run`, `last_run_status`, increments `run_count`
-- Updates `.claude/docs/WORKFLOWS.md` registry
+- **[process-source](../../workflows/process-source/PLAN.md)** — Interactive source processing. Gathers context, proposes actions to the user, executes the chosen action, and emits structured output for the Inbox app.
+- **[triage-sources](../../workflows/triage-sources/PLAN.md)** — Automated batch triage. Discovers matching workflows for each source, falls back to default assessment, creates tasks and drafts.
 
-There are no separate "execution notes" or "learned adjustments" sections. The steps evolve.
+## Turning a Session into a Workflow
+
+After completing multi-step work in a session, the agent (or user) may recognize that the work is repeatable. To convert a completed session into a workflow:
+
+1. Review the session's steps — what was done, in what order, using which skills/tools
+2. Generalize: replace specific values with `{{parameters}}` (e.g., a specific date → `{{month}}`)
+3. Enter Plan Mode and draft the PLAN.md based on the session's actual steps
+4. Save and register in `workflows/index.md`
+
+The process-source workflow does this automatically in its final step — after executing an action, it evaluates whether the session's work was repeatable and proposes creating a workflow if so.
 
 ## When to Use
 
@@ -110,9 +138,11 @@ There are no separate "execution notes" or "learned adjustments" sections. The s
 - User references an existing workflow
 - User says "automate", "workflow", "schedule", "run every", "save this process"
 - User asks to list, edit, or delete workflows
+- A completed session followed a multi-step pattern that will recur (propose workflow creation)
 
 ## When NOT to Use
 
 - One-off tasks that won't be repeated (just do them directly)
+- Simple actions: single draft, single task creation, skip
 - Simple data queries (use domain skills directly)
-- Creating or editing skills (use the contribute skill or skill-creator)
+- Creating or editing skills (use skill-creator)

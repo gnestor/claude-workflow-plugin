@@ -10,10 +10,6 @@ A Claude Code plugin for workspaces using the Inbox app. Provides skills for wor
 
 3. **render-output** — Guidelines and examples for the `render_output` MCP tool. Covers output type selection, React artifact design patterns, and component usage.
 
-## Hooks
-
-The Stop hook evaluates whether meaningful work was done. If so, it prompts Claude to update workspace files (skills, docs, todos, workflows, context pages) and commit via `/commit`.
-
 ## Plugin Loading
 
 The Inbox app loads this plugin via the Claude Agent SDK's `plugins` option in `packages/inbox/server/lib/session-manager.ts`. Skills are trigger-based (loaded on-demand), hooks fire at session events.
