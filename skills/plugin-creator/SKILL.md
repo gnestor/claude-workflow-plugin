@@ -51,6 +51,7 @@ Identify:
 - Available actions (archive, mark read, reply, label, etc.)
 - Pagination style (cursor, offset, or page-based)
 - Rate limits
+- **Filter parameters**: Which query params does the list endpoint actually accept? Many APIs don't support all the filter fields you'd expect. Test with curl before hardcoding server-side filter params. When in doubt, fetch unfiltered and filter client-side.
 
 ### Step 2 — Plan the plugin
 
@@ -176,6 +177,8 @@ export default plugin
    - Which env vars to fill in (if not already set)
    - Restart the server: `npm run inbox:dev` (from workspace root) or `kill -9 $(lsof -ti :3002) && cd packages/inbox && npm run dev:server -- --workspace ../agent`
    - The plugin appears as a new tab in the inbox automatically on restart
+
+> **Important**: The inbox server loads plugins via dynamic `import()` at startup. Changes to plugin files require a full server restart — Vite HMR only reloads frontend code, not workspace plugins.
 
 ### Step 5 — Verify
 

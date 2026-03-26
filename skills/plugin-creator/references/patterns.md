@@ -2,6 +2,13 @@
 
 ## Sub-Items (e.g. messages within a channel)
 
+**Required sub-item fields for MessageRow rendering:**
+- `text` (not `body`) — message content (HTML or plain text)
+- `ts` — Unix timestamp as string in seconds (e.g. `String(new Date(dt).getTime() / 1000)`)
+- `userName` (not `senderName`) — display name
+- `bodyType` — set to `"html"` for HTML content, omit for plain text
+- `attachments` — optional array of `{ url, contentType, name, size }` (images render inline)
+
 When items contain child items (Slack messages in a channel, GitHub comments on an issue), implement `querySubItems`:
 
 ```typescript
@@ -12,7 +19,7 @@ async querySubItems(parentId, filters, cursor) {
       id: c.id,
       text: c.body,
       userName: c.author.name,
-      ts: c.created_at,
+      ts: String(new Date(c.created_at).getTime() / 1000),
     })),
     nextCursor: data.next_cursor,
   }
@@ -269,17 +276,29 @@ async querySubItems(ticketId, filters, cursor, ctx) {
   return {
     items: messages.data.map((m) => ({
       id: String(m.id),
-      text: m.body_text || stripHtml(m.body_html),
+      // Use `text`, not `body` or `body_text` — MessageRow requires this field name
+      text: m.body_html || m.body_text,
+      // Use `bodyType: "html"` when content is HTML so MessageRow renders it correctly
+      bodyType: m.body_html ? "html" : undefined,
+      // Use `userName`, not `senderName` — MessageRow requires this field name
       userName: m.sender?.name || m.sender?.email,
       userAvatar: m.sender?.avatar,
+      // `ts` must be seconds-since-epoch as a string
       ts: String(new Date(m.created_datetime).getTime() / 1000),
       isInternal: m.via === "internal-note",
+      // Attachments: images render as thumbnails, others as download links
+      attachments: (m.attachments ?? []).map((a: any) => ({
+        url: decodeURIComponent(a.url),
+        contentType: a.content_type,
+        name: a.name,
+        size: a.size,
+      })),
     })),
   }
 }
 ```
 
-Include `userName` and `userAvatar` on each sub-item so the generic `MessageRow` renders avatars and names. The `ts` field should be a Unix timestamp string (seconds) for consistent formatting.
+Include `userName` and `userAvatar` on each sub-item so the generic `MessageRow` renders avatars and names. The `ts` field must be a Unix timestamp string (seconds) for consistent formatting. Note that some CDN attachment URLs may be URL-encoded — always call `decodeURIComponent()` on them.
 
 ### Mutation pattern (reply + close)
 
@@ -305,4 +324,128 @@ async mutate(id, action, payload) {
     }
   }
 }
+```
+
+## Timestamps
+
+The frontend's `getItemTimestamp()` treats any string containing `.` as a Slack-style epoch float. This means ISO dates with fractional seconds (e.g. `2024-01-15T10:30:00.000000+00:00`) will be misinterpreted.
+
+- For item-level timestamp fields (e.g. `lastMessageAt`), strip fractional seconds: `createdAt: apiDate.replace(/\.\d+/, "")`
+- For sub-item `ts` fields, always convert to seconds-since-epoch: `ts: String(new Date(apiDate).getTime() / 1000)`
+
+```typescript
+// Item-level date — strip fractional seconds so it isn't treated as an epoch float
+lastMessageAt: ticket.updated_at.replace(/\.\d+/, ""),
+
+// Sub-item ts — always convert to seconds-since-epoch string
+ts: String(new Date(message.created_datetime).getTime() / 1000),
+```
+
+## Client-Side Filtering
+
+When the external API doesn't support a filter as a query parameter, fetch unfiltered and filter client-side. Always test which query params the API actually accepts with curl before hardcoding server-side filter params — many APIs silently ignore unknown params rather than returning an error.
+
+```typescript
+async query(filters, cursor) {
+  // Parse comma-separated filter values
+  const requestedViews = filters.view ? String(filters.view).split(",") : []
+
+  // Pass only params the API actually accepts
+  const data = await apiRequest<{ data: any[] }>("/tickets", {
+    status: filters.status,   // supported
+    // view: filters.view     // NOT supported — filter client-side instead
+    cursor,
+  })
+
+  // Filter results after fetching
+  const items = requestedViews.length
+    ? data.data.filter((t) => requestedViews.includes(t.view))
+    : data.data
+
+  return { items: items.map(mapTicket) }
+}
+```
+
+## Grouped Filter Options
+
+For hierarchical categories (e.g. Gorgias views grouped by team, GitHub labels grouped by type), encode section headers as `__group__:SectionName` markers in the `filterOptions` response. Items before the first `__group__:` marker render ungrouped at the top. The frontend parses these into ComboboxGroup sections automatically.
+
+```typescript
+filterOptions: {
+  view: async () => {
+    const views = await apiRequest<{ data: any[] }>("/views")
+
+    const options: string[] = []
+
+    // Ungrouped items first (render at top without a section header)
+    const shared = views.data.filter((v) => v.type === "shared")
+    options.push(...shared.map((v) => v.name))
+
+    // Group the rest by team
+    const byTeam = Map.groupBy(views.data.filter((v) => v.type === "team"), (v) => v.team.name)
+    for (const [teamName, teamViews] of byTeam) {
+      options.push(`__group__:${teamName}`)
+      options.push(...teamViews.map((v) => v.name))
+    }
+
+    return options
+  },
+}
+```
+
+## Attachments
+
+Include attachments on sub-items for inline media rendering. Image attachments (where `contentType` starts with `"image/"`) render as thumbnails above the message text. Non-image attachments render as download links below the text.
+
+```typescript
+attachments: (m.attachments ?? []).map((a: any) => ({
+  url: decodeURIComponent(a.url),   // Some APIs URL-encode CDN URLs — always decode
+  contentType: a.content_type,
+  name: a.name,
+  size: a.size,                     // bytes, used for display formatting
+})),
+```
+
+Notes:
+- Some APIs URL-encode CDN URLs — always call `decodeURIComponent(a.url)` to be safe
+- External CDN URLs (Instagram, Facebook, etc.) may carry time-limited signatures that expire after hours or days — they cannot be permanently stored and will break if cached
+
+## Detail Schema (Action Buttons)
+
+To add toolbar buttons to the detail panel, declare `detailSchema` with an `action-buttons` widget. Each action calls `mutate(itemId, mutation, undefined)` when clicked.
+
+```typescript
+detailSchema: [
+  {
+    id: "actions",
+    type: "action-buttons",
+    listRole: "hidden",
+    actions: [
+      {
+        id: "archive",
+        label: "Archive",
+        icon: "Archive",
+        mutation: "archive",
+      },
+      {
+        id: "delete",
+        label: "Delete",
+        icon: "Trash2",
+        mutation: "delete",
+        variant: "destructive",
+      },
+    ],
+  },
+],
+
+async mutate(id, action, payload) {
+  switch (action) {
+    case "archive":
+      await apiRequest(`/items/${id}`, { method: "PATCH", body: { status: "archived" } })
+      break
+    case "delete":
+      await apiRequest(`/items/${id}`, { method: "DELETE" })
+      break
+  }
+},
 ```
